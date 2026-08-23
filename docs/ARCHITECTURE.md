@@ -184,3 +184,63 @@ Each agent emits standard OpenTelemetry traces (ADK's built-in instrumentation) 
 - `POST /api/briefings/generate` — manually trigger a briefing generation (used live in the demo instead of waiting for the scheduled job).
 - `GET /api/risk-register/export?format=csv` — exports the current risk register (all fields including `recommended_action` and `suggested_followup_question`) as a downloadable file, so the deal team can drop it into their own IC memo or deck. This is a deliberate, cheap addition closing a real gap versus commercial tools in this category, which typically offer exactly this kind of export.
 - `POST /api/risk-register/:id/draft-exception` — has the Orchestrator draft/update an entry in a real Google Doc acting as the deal's **Schedule of Exceptions** (a genuine M&A artifact: findings that get disclosed on a schedule so the seller isn't liable for them, rather than fixed or walked away from). This is the agent completing real deal-workflow output, not just analysis — the difference between a reporting tool and a Taskmaster-style agent that "does something."
+
+---
+
+## 12. Build-Time Discoveries (what was actually true, verified live)
+
+This section records where reality differed from the plan above — kept here so
+the submission can cite facts, not assumptions.
+
+1. **Gemini 3.5 is global-endpoint-only on this project.** `gemini-3.5-flash`
+   404s in `us-central1`; it serves from `location="global"`. All model calls
+   use the global endpoint; Agent Engine containers preset
+   `GOOGLE_CLOUD_LOCATION=us-central1`, so agent code must force-override it.
+2. **Agent Engine speaks A2A natively.** `vertexai.preview.reasoning_engines.A2aAgent`
+   deploys an agent whose A2A HTTP+JSON surface is served by Agent Engine itself:
+   `POST {engine}/a2a/v1/message:send`, then `GET {engine}/a2a/v1/tasks/{id}`.
+   No serving substitute needed — the fleet's A2A runs on Agent Runtime.
+   Version pin required: the template needs `a2a-sdk==0.3.4` (the proto-based
+   1.x that `google-adk[a2a]` resolves to is incompatible with the template).
+3. **Agent Engine replicas are ephemeral → task store must be persistent.**
+   With the default in-memory store the task created by `message:send` is
+   "Task not found" on the next poll (different replica). `FirestoreTaskStore`
+   (separate `dealguard-a2a` database) makes the A2A task lifecycle replica-safe.
+4. **Parallel Agent Engine deploys clobber each other.** The SDK stages every
+   deploy at the same `gs://{bucket}/agent_engine/dependencies.tar.gz` path;
+   deploying three agents concurrently shipped one agent's code to all three
+   engines. Fix: unique `gcs_dir_name` per agent.
+5. **Agent Registry registration shape (v1):** there is no `agents.create`.
+   You `POST /services` with `agentSpec.type=A2A_AGENT_CARD` and the agent card
+   as content (`interfaces` must be empty — connection details live inside the
+   card). The registry materializes a read-only Agent (URN). **Additionally**,
+   A2A agents deployed on Agent Engine are auto-registered by the platform —
+   the five DealGuard agents appear in the registry with
+   `aiplatform:reasoningEngines` URNs without any manual call.
+6. **Model Armor misses diluted injections.** The poisoned seed document passes
+   a whole-document scan (long benign context drowns the signal) but its
+   injection paragraph alone is flagged. The gateway therefore screens the full
+   text AND overlapping ~800-char chunks; any match blocks. Confidence level
+   `LOW_AND_ABOVE` (at `MEDIUM_AND_ABOVE`, even the isolated injection text
+   passed).
+7. **Service accounts cannot own Drive files** (no storage quota since 2025).
+   The data-room folder is created by the runtime SA (folders are quota-free),
+   the human drops files into it, and the SA reads them via folder-inherited
+   permissions — verified read AND write on user-created items. The Schedule of
+   Exceptions doc is therefore created once by the human in the data room and
+   appended to via the Docs API.
+8. **Per-agent identity:** each of the five agents runs on Agent Engine under
+   its own dedicated service account (`dealguard-orch`, `dealguard-legal`, …).
+   Zero-trust at IAM level: only the orchestrator's SA holds `datastore.user`
+   on the risk-register database; specialist SAs hold a *conditional*
+   `datastore.user` scoped to the `dealguard-a2a` task database only. The
+   Agent Identity API surface (`agentidentity.googleapis.com`, authProviders)
+   is enabled and reachable; per-agent workload identity beyond IAM service
+   accounts is documented as future scope.
+9. **Memory Bank:** the Firestore `deal_memory` fallback from §6 is what ships —
+   a deterministic running summary rewritten after each document (the deal's
+   context is structured; no semantic search needed, zero extra model cost).
+10. **Drive push notifications to Cloud Run work** — `files.watch` on the
+    data-room folder accepted the run.app webhook (no domain verification
+    hurdle); channels expire in ~1h, so the demo script re-arms the channel
+    (`/watch/renew`) before each session.

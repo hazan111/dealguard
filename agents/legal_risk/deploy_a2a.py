@@ -105,6 +105,7 @@ remote_agent = agent_engines.create(
         "sse-starlette",
     ],
     extra_packages=['agent.py', 'dealguard_shared'],
+    gcs_dir_name="agent_engine_" + AGENT_NAME,  # parallel deploys clobber the default shared staging path
     display_name="dealguard-" + AGENT_NAME.replace("_", "-"),
     description=card.description,
     env_vars=env_vars,

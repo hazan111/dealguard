@@ -85,6 +85,10 @@ def scan_folder() -> list[dict]:
             fields="nextPageToken, files(id, name, mimeType, md5Checksum, version, webViewLink)",
             pageToken=page_token).execute()
         for file in resp.get("files", []):
+            # The Schedule of Exceptions doc lives in the data room but is an
+            # OUTPUT of the system, not an input — never ingest it.
+            if file["name"].startswith("Schedule of Exceptions"):
+                continue
             marker = file.get("md5Checksum") or file.get("version", "")
             if _seen.get(file["id"]) == marker:
                 continue

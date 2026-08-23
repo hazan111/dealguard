@@ -227,21 +227,26 @@ def draft_exception(fid: str, user: str = Depends(require_user)):
         creds, _ = google.auth.default(scopes=scopes)
     docs_api = build("docs", "v1", credentials=creds, cache_discovery=False)
 
+    # Service accounts can no longer own Drive files (no storage quota since
+    # 2025), so the doc is created once by the human user and placed in the
+    # data-room folder; we discover it by title and append to it.
     doc_id = os.environ.get("SCHEDULE_OF_EXCEPTIONS_DOC_ID", "")
     snap = store.db().collection("settings").document("exceptions_doc").get()
     if not doc_id and snap.exists:
         doc_id = snap.get("doc_id")
     if not doc_id:
-        created = docs_api.documents().create(
-            body={"title": "Schedule of Exceptions — Project Kestrel"}).execute()
-        doc_id = created["documentId"]
-        store.db().collection("settings").document("exceptions_doc").set({"doc_id": doc_id})
         drive_api = build("drive", "v3", credentials=creds, cache_discovery=False)
-        drive_api.permissions().create(fileId=doc_id, sendNotificationEmail=False,
-                                       body={"type": "user", "role": "writer",
-                                             "emailAddress": "hhasanhh125@gmail.com"}).execute()
-        drive_api.files().update(fileId=doc_id,
-                                 addParents=config.drive_folder_id).execute()
+        hits = drive_api.files().list(
+            q=("name contains 'Schedule of Exceptions' and "
+               "mimeType = 'application/vnd.google-apps.document' and trashed = false"),
+            fields="files(id, name)").execute().get("files", [])
+        if not hits:
+            raise HTTPException(409, (
+                "Schedule of Exceptions doc not found. Create a Google Doc named "
+                "'Schedule of Exceptions — Project Kestrel' inside the data-room "
+                "folder (or share it with the runtime service account), then retry."))
+        doc_id = hits[0]["id"]
+        store.db().collection("settings").document("exceptions_doc").set({"doc_id": doc_id})
 
     entry = (f"\n{finding['domain'].upper()} — {finding.get('red_flag_pattern','')}\n"
              f"{finding['summary']}\n"

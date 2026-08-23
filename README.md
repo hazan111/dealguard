@@ -40,15 +40,17 @@ Each agent is its own deployable unit, communicating over the **A2A (Agent-to-Ag
 
 Before committing to this architecture, access to every relevant platform component was verified directly against a real Google Cloud project (not assumed from documentation). Results:
 
+**End-of-build status (what actually shipped, verified live — see `ARCHITECTURE.md` §12 for the full discovery log):**
+
 | Component | Status | How it's used here |
 |---|---|---|
-| **Agent Registry** | ✅ Verified accessible, enabled | Each of the 5 agents is registered here |
-| **Agent Identity** | ✅ Verified accessible | Each agent gets its own identity; zero-trust — Legal agent cannot read HR documents, etc. |
-| **Model Armor** | ✅ Verified accessible, CLI confirmed working (`gcloud model-armor templates` / `floorsettings`) | Screens all incoming document content and agent outputs for prompt injection / PII leakage before it reaches agent reasoning |
-| **Agent Observability** | ✅ Likely accessible (`observability.googleapis.com` present) | Reasoning traces, audit log of what each agent saw and concluded |
-| **Agent Runtime (Vertex AI Agent Engine)** | ✅ **Confirmed working** — `agent_engines.list()` succeeded against the live project | Hosts all 5 agents as long-running, stateful deployments |
-| **Memory Bank** | ⚠️ No standalone API found; attempt via Agent Engine's built-in session/memory mechanism first | Persists deal context (which documents were seen, what's still open) across the weeks-long deal timeline. **Fallback:** a Firestore-backed memory store if the built-in mechanism doesn't cover this use case — whichever is actually used will be stated plainly in the submission, not hidden. |
-| **Agent Gateway** | ❌ **Not accessible** — confirmed absent from this project's available services in two separate scans; appears to be Private Preview / invite-only | **Substituted** with a custom-built lightweight gateway (a Cloud Run service handling routing + calling Model Armor before forwarding to agents). This substitution is disclosed explicitly in the Devpost submission — it is not hidden or glossed over. |
+| **Agent Registry** | ✅ **In production use** | All 5 agents appear in the registry. Two paths verified live: manual `services.create` with `agentSpec.type=A2A_AGENT_CARD`, and — better — the platform **auto-registers** A2A agents deployed on Agent Engine (`aiplatform:reasoningEngines` URNs). The shipped fleet uses the auto-registered entries. |
+| **Agent Identity** | ✅ **Per-agent identity shipped via dedicated service accounts** | Each of the 5 agents runs under its own service account. Zero-trust at IAM level: only the orchestrator's SA can touch the risk-register Firestore DB; specialist SAs hold conditional access to the A2A task DB only. The `agentidentity.googleapis.com` authProviders surface is enabled/reachable; adopting it beyond IAM SAs is future scope, disclosed in the submission. |
+| **Model Armor** | ✅ **In production use** (regional REST endpoint; the gcloud CLI's global endpoint is not accessible on this project) | Screens every document before agent reasoning — whole text AND overlapping chunks, because a short injection inside a long benign document defeats a whole-document scan (verified; see ARCHITECTURE §12.6). Blocked the poisoned seed document live. |
+| **Agent Observability** | ✅ Cloud Logging/Trace surface engine logs (used for live debugging during the build) | Reasoning/exec logs per engine; plus DealGuard's own `deal_timeline` audit trail in Firestore. |
+| **Agent Runtime (Vertex AI Agent Engine)** | ✅ **All 5 agents deployed and serving** | Deployed with the **native A2A template** (`A2aAgent`) — Agent Engine itself serves each agent's A2A HTTP+JSON endpoint (`{engine}/a2a/v1/message:send` + task polling). Firestore-backed A2A task store (replicas are ephemeral). |
+| **Memory Bank** | ✅ Shipped via the disclosed Firestore fallback | `deal_memory` collection: a deterministic running deal summary rewritten after each document. The deal's context is structured (a risk register), so no semantic store is needed — stated plainly, per the plan. |
+| **Agent Gateway** | ❌ Private Preview, not accessible — **substituted** (disclosed) | Cloud Run `gateway` service: Model Armor screening → Gemini classification → A2A forward to the Orchestrator on Agent Engine. |
 
 This verification-first approach (rather than assuming platform docs equal project access) is itself part of the Architectural Discipline story for this submission.
 
@@ -212,6 +214,25 @@ cd dashboard-frontend && npm install && npm run dev
 Full architecture and exact per-agent deploy commands: [`ARCHITECTURE.md`](./ARCHITECTURE.md). Full ordered build plan: [`TASKLIST.md`](./TASKLIST.md).
 
 ---
+
+## 8a. Deployed Resources (live project: `gen-lang-client-0930125328`, us-central1)
+
+| Resource | Value |
+|---|---|
+| Agent Engine — orchestrator | `reasoningEngines/8362895886224719872` (SA: `dealguard-orch@…`) |
+| Agent Engine — legal | `reasoningEngines/4489800206686093312` (SA: `dealguard-legal@…`) |
+| Agent Engine — financial | see `.env` (redeployed after the parallel-staging fix; SA: `dealguard-financial@…`) |
+| Agent Engine — hr | see `.env` (SA: `dealguard-hr@…`) |
+| Agent Engine — ip | `reasoningEngines/575046230594289664` (SA: `dealguard-ip@…`) |
+| Cloud Run — gateway (Agent Gateway substitute) | `https://dealguard-gateway-894106893022.us-central1.run.app` |
+| Cloud Run — drive-watcher | `https://dealguard-drivewatcher-894106893022.us-central1.run.app` |
+| Cloud Run — dashboard API | `https://dealguard-dashboardbackend-894106893022.us-central1.run.app` |
+| Firestore | named DBs `dealguard` (risk register) + `dealguard-a2a` (A2A task store), us-central1 |
+| Model Armor template | `templates/dealguard-screen` (PI/jailbreak LOW_AND_ABOVE + SDP + malicious URI) |
+| Drive data room | folder `1PbHPE9dvCUKz8TYhlzlq_0ZJzwNLOHV6` (push watch → drive-watcher) |
+| Voice briefing storage | `gs://gen-lang-client-0930125328-dealguard/briefings/` |
+
+Demo runbook: `scripts/demo.sh local|cloud|reset|stop`.
 
 ## 9. Responsible Delivery / Disclosures
 

@@ -54,7 +54,7 @@ Authoritative, ordered build plan. Work in order — later phases depend on earl
 
 ## Phase 5 — Agent Identity (zero-trust scoping)
 
-- [ ] Assign each of the five agents its own Agent Identity (`agentidentity.googleapis.com`). Configure access such that: the Legal agent's identity can only read documents classified `legal`, the Financial agent's only `financial`, and so on — enforced at minimum at the application level in this hackathon build (the gateway only forwards a document to the agent matching its classification), with Agent Identity providing the underlying cryptographic identity/audit trail for each agent's actions even though full IAM-policy-level document partitioning may be more than the timeframe allows — state clearly in the submission exactly how much of the zero-trust boundary is enforced by real Agent Identity policy vs. by application logic, rather than overclaiming.
+- [x] **Done, and stronger than originally scoped:** each of the five agents runs under its own dedicated service account. Data access is enforced at the **IAM level**, not application code: only the orchestrator's SA holds `datastore.user` on the risk-register database; specialist SAs hold a conditional grant scoped to the `dealguard-a2a` task database only. Verified empirically (2026-08-23): a read of the risk register authenticated as the Legal agent's SA returns `403 PERMISSION_DENIED`; the same identity reads the task store successfully. The remaining application-level layer is content routing only (the gateway decides which classified text is sent to which specialist over A2A). The `agentidentity.googleapis.com` authProviders surface was probed and is reachable; adopting it beyond IAM service accounts is future scope, disclosed in the submission.
 
 ## Phase 6 — Model Armor
 
@@ -69,7 +69,7 @@ Authoritative, ordered build plan. Work in order — later phases depend on earl
 ## Phase 8 — Drive Watcher & Document Parsing
 
 - [ ] Write `drive-watcher/main.py` (FastAPI on Cloud Run): sets up a Drive API watch channel on `DRIVE_DATA_ROOM_FOLDER_ID` at startup, exposes a webhook endpoint Drive will POST to, and on each notification, lists changed files, downloads new ones, and calls the gateway with the file reference and extracted text (use a simple PDF-text-extraction library — this doesn't need OCR for the hackathon scope, all seed documents are text-based PDFs).
-- [ ] Implement watch-channel renewal (a simple scheduled check, since channels expire — see `ARCHITECTURE.md` §8) — a basic cron-triggered renewal is sufficient, not a production-grade system.
+- [x] Watch-channel renewal — **built as manual re-arm, not a cron** (see `ARCHITECTURE.md` §8): the watcher re-registers on startup, and the token-protected `/watch/renew` endpoint is called by `scripts/demo.sh cloud` at the start of each session. Channels expire ~1h (observed); with no scheduler, push lapses between sessions until the script is re-run — disclosed as a limitation in the submission.
 - [ ] Deploy: `gcloud run deploy dealguard-drive-watcher --source=./drive-watcher --region=us-central1`.
 
 ## Phase 9 — Dashboard Backend

@@ -162,9 +162,13 @@ Attempt first: use Agent Engine's built-in session/memory mechanism (accessible 
 
 Configured via `gcloud model-armor templates create` (or the REST API equivalent) with a template that screens for: prompt injection patterns, PII (names, SSNs/national IDs, account numbers), and jailbreak attempts. The `gateway/model_armor_client.py` module calls this template synchronously before any document content is passed to the Orchestrator. A blocked verdict is logged to `deal_timeline` as a `model_armor_block` event and surfaced immediately on the dashboard — this is the "poisoned document" demo moment.
 
+**Why the scanning is chunked, not single-pass:** an injection embedded in a long, benign document dilutes the classifier signal below threshold — the poisoned seed document passes a whole-document scan, while its injection paragraph alone is flagged (verified live; see §12.6). `screen_text()` therefore submits the full text AND overlapping ~800-character segments (100-char overlap), and a match in any segment blocks the document.
+
 ## 8. Google Drive Ingestion (push notifications)
 
-`drive-watcher` sets up a Drive API **watch channel** on the data-room folder (`files.watch` on the folder, or a `changes.watch` scoped to that folder's contents) at startup. Google sends a POST to the watcher's Cloud Run endpoint whenever a file is added/changed. The watcher fetches the file, computes a stable `document_id`, and hands it to the gateway. Watch channels expire (max ~7 days per Drive API limits) — the watcher must renew the channel before expiry; for the hackathon's timeframe this is a simple renewal cron, not a production-grade renewal system.
+`drive-watcher` sets up a Drive API **watch channel** on the data-room folder (`files.watch` on the folder) at startup. Google sends a POST to the watcher's Cloud Run endpoint whenever a file is added/changed. The watcher fetches the file, computes a stable `document_id`, and hands it to the gateway.
+
+**Channel renewal, as actually built (no cron):** channels on this folder expire after roughly an hour (observed), and there is no scheduled/automatic renewal job. Re-registration happens in exactly two ways: (1) the watcher re-registers on container startup when `PUBLIC_URL` is set, and (2) the token-protected `/watch/renew` endpoint re-arms the channel on demand — `scripts/demo.sh cloud` calls it manually at the start of each demo session, which is the operative mechanism today. If no one runs the script and the container doesn't restart, push notifications silently stop when the channel lapses; a production build would need a real scheduler (e.g. Cloud Scheduler hitting `/watch/renew`).
 
 ## 9. Daily Voice Briefing (Multimodal UX bonus)
 
@@ -233,7 +237,14 @@ the submission can cite facts, not assumptions.
    its own dedicated service account (`dealguard-orch`, `dealguard-legal`, …).
    Zero-trust at IAM level: only the orchestrator's SA holds `datastore.user`
    on the risk-register database; specialist SAs hold a *conditional*
-   `datastore.user` scoped to the `dealguard-a2a` task database only. The
+   `datastore.user` scoped to the `dealguard-a2a` task database only.
+   **Verified empirically 2026-08-23**, not just by inspecting policy:
+   authenticated as `dealguard-legal@…`, a REST read of the `dealguard`
+   (risk-register) database returns `403 PERMISSION_DENIED`; the same
+   identity's read of `dealguard-a2a` returns `200`. What remains
+   application-level is content routing only — which document text a
+   specialist receives is the gateway's classification decision, since
+   content reaches specialists over A2A rather than from storage. The
    Agent Identity API surface (`agentidentity.googleapis.com`, authProviders)
    is enabled and reachable; per-agent workload identity beyond IAM service
    accounts is documented as future scope.

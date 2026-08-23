@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+httpx
+PyJWT
+google-auth
+google-api-python-client
+google-cloud-firestore
+google-cloud-storage
+google-cloud-texttospeech
+google-genai

@@ -7,3 +7,7 @@ dist/
 .secrets/
 *.log
 .DS_Store
+# vendored copies (deploy.sh) — single source of truth stays in shared/
+gateway/dealguard_shared/
+dashboard-backend/dealguard_shared/
+drive-watcher/dealguard_shared/

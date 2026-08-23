@@ -92,8 +92,10 @@ for key in ("LEGAL_AGENT_A2A_URL", "FINANCIAL_AGENT_A2A_URL",
     if os.environ.get(key):
         env_vars[key] = os.environ[key]
 
-remote_agent = agent_engines.create(
-    A2aAgent(agent_card=card,
+_existing = os.environ.get("DEALGUARD_UPDATE_ENGINE", "")
+_op = (lambda **kw: agent_engines.update(_existing, **kw)) if _existing else agent_engines.create
+remote_agent = _op(
+    agent_engine=A2aAgent(agent_card=card,
              agent_executor_builder=agent_executor_builder,
              task_store_builder=task_store_builder),
     requirements=[

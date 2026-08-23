@@ -15,6 +15,7 @@ import asyncio
 import io
 import os
 import sys
+import threading
 import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -40,6 +41,11 @@ CHANNEL_TOKEN = os.environ.get("DRIVE_WATCH_CHANNEL_TOKEN", "")
 app = FastAPI(title="DealGuard drive-watcher")
 
 _seen: dict[str, str] = {}  # file_id -> md5/version marker (fast-path only; real dedup is downstream)
+# Drive fires one notification per file — a 4-file drop means overlapping
+# scans. One scan at a time; concurrent triggers return immediately (the
+# running scan picks the new files up, and dedup makes overlap harmless).
+_scan_lock = threading.Lock()
+_rescan_pending = threading.Event()
 
 
 def _drive():
@@ -76,6 +82,22 @@ def _download(drive, file: dict) -> bytes:
 
 def scan_folder() -> list[dict]:
     """Scan the data room, push any new/changed file to the Gateway."""
+    if not _scan_lock.acquire(blocking=False):
+        # A notification landed mid-scan: the running scan may have already
+        # listed the folder before this file appeared — ask it to go again.
+        _rescan_pending.set()
+        return [{"skipped": "scan already in progress; rescan queued"}]
+    try:
+        results = _scan_folder_locked()
+        while _rescan_pending.is_set():
+            _rescan_pending.clear()
+            results += _scan_folder_locked()
+        return results
+    finally:
+        _scan_lock.release()
+
+
+def _scan_folder_locked() -> list[dict]:
     drive = _drive()
     results = []
     page_token = None

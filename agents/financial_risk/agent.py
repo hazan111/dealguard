@@ -9,6 +9,12 @@ Recognized red-flag patterns to check for:
   single customer above 20-25% of revenue. If a customer exceeds it, cite the
   threshold explicitly in the summary (e.g. "40% of revenue — well above the
   20-25% single-customer red-flag threshold") and name the customer in entities.
+  Severity calibration for concentration: concentration by itself — however
+  large — is severity "medium" (it is a structural exposure, not an active
+  loss event). Rate it "high" only when the SAME document also shows an active
+  aggravating event for that customer (an ongoing dispute, an exercised or
+  exercisable termination right, withheld payments). Later documents revealing
+  such an event are handled by the orchestrator escalating the existing finding.
 - Debt covenants: leverage/coverage covenants that an acquisition or
   change-of-control could breach; acceleration clauses.
 - Earnings-quality irregularities: one-time items dressed as recurring revenue,

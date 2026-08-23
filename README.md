@@ -196,16 +196,17 @@ gcloud services enable aiplatform.googleapis.com agentregistry.googleapis.com \
   agentidentity.googleapis.com modelarmor.googleapis.com observability.googleapis.com \
   run.googleapis.com firestore.googleapis.com drive.googleapis.com
 
-# deploy each agent to Agent Engine (see ARCHITECTURE.md §5 for the exact deploy script per agent)
-cd agents/orchestrator && python deploy.py && cd ../..
-cd agents/legal_risk && python deploy.py && cd ../..
-cd agents/financial_risk && python deploy.py && cd ../..
-cd agents/hr_risk && python deploy.py && cd ../..
-cd agents/ip_risk && python deploy.py && cd ../..
+# deploy each agent to Agent Engine with the native A2A template
+# (deploy SEQUENTIALLY or rely on the per-agent gcs_dir_name — see ARCHITECTURE §12.4;
+#  specialists first, then the orchestrator, whose env needs their A2A URLs in .env)
+for A in legal_risk financial_risk hr_risk ip_risk orchestrator; do
+  (cd agents/$A && ../../.venv/bin/python deploy_a2a.py)
+done
 
-# deploy the gateway substitute and dashboard backend to Cloud Run
-gcloud run deploy dealguard-gateway --source=./gateway --region=us-central1
-gcloud run deploy dealguard-dashboard-api --source=./dashboard-backend --region=us-central1
+# deploy the gateway substitute, drive-watcher and dashboard backend to Cloud Run
+./deploy.sh gateway
+./deploy.sh drive-watcher
+./deploy.sh dashboard-backend
 
 # run the dashboard frontend locally for development
 cd dashboard-frontend && npm install && npm run dev

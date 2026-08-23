@@ -1,5 +1,12 @@
 """Registers all five DealGuard agents in Agent Registry (TASKLIST Phase 4).
 
+NOTE — superseded in the shipped build: A2A agents deployed on Agent Engine are
+auto-registered by the platform (aiplatform:reasoningEngines URNs), so the
+production fleet needs no manual registration. This script remains as the
+exercised, working manual path (services.create + A2A_AGENT_CARD) and as
+documentation of the API shape; running it would create parallel duplicate
+entries next to the auto-registered ones.
+
 Discovered API shape (exercised live against this project, 2026-08-23):
 - Registration is `services.create` with agentSpec.type=A2A_AGENT_CARD and the
   agent's A2A card as content (connection URL lives INSIDE the card; the

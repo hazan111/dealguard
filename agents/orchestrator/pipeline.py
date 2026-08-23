@@ -20,7 +20,7 @@ from dealguard_shared.citation import citation_verified
 from dealguard_shared.config import config
 from dealguard_shared.schemas import SpecialistReport
 
-from a2a_client import A2AError, a2a_send
+from dealguard_shared.a2a_client import A2AError, a2a_send
 
 SPECIALIST_URLS = {
     "legal": os.environ.get("LEGAL_AGENT_A2A_URL", "http://127.0.0.1:8101"),

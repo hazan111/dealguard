@@ -104,7 +104,7 @@ remote_agent = agent_engines.create(
         "httpx",
         "sse-starlette",
     ],
-    extra_packages=['agent.py', 'pipeline.py', 'a2a_client.py', 'dealguard_shared'],
+    extra_packages=['agent.py', 'pipeline.py', 'dealguard_shared'],
     display_name="dealguard-" + AGENT_NAME.replace("_", "-"),
     description=card.description,
     env_vars=env_vars,

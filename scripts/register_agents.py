@@ -28,12 +28,27 @@ PROJECT = os.environ["GOOGLE_CLOUD_PROJECT"]
 REGION = os.environ.get("GOOGLE_CLOUD_REGION", "us-central1")
 BASE = f"https://agentregistry.googleapis.com/v1/projects/{PROJECT}/locations/{REGION}"
 
+AE_BASE = "https://us-central1-aiplatform.googleapis.com/v1beta1"
+
+# (display name, A2A endpoint, description) per agent. Endpoints come from the
+# deployed Agent Engine resource names in .env; the card is constructed here
+# because the AE card route serves the executor, not the static card.
 AGENTS = {
-    "orchestrator": os.environ.get("ORCHESTRATOR_CARD_URL", "http://127.0.0.1:8100"),
-    "legal-risk": os.environ.get("LEGAL_CARD_URL", "http://127.0.0.1:8101"),
-    "financial-risk": os.environ.get("FINANCIAL_CARD_URL", "http://127.0.0.1:8102"),
-    "hr-risk": os.environ.get("HR_CARD_URL", "http://127.0.0.1:8103"),
-    "ip-risk": os.environ.get("IP_CARD_URL", "http://127.0.0.1:8104"),
+    "orchestrator": ("dealguard_orchestrator",
+                     f"{AE_BASE}/{os.environ.get('ORCHESTRATOR_AGENT_ENGINE_ID','')}",
+                     "DealGuard orchestrator: routes due-diligence documents to specialist risk agents over A2A, verifies citations, links cross-domain findings, maintains the risk register."),
+    "legal-risk": ("legal_risk_agent",
+                   f"{AE_BASE}/{os.environ.get('LEGAL_AGENT_ENGINE_ID','')}",
+                   "M&A legal due-diligence specialist: change-of-control clauses, adverse termination terms, litigation."),
+    "financial-risk": ("financial_risk_agent",
+                       f"{AE_BASE}/{os.environ.get('FINANCIAL_AGENT_ENGINE_ID','')}",
+                       "M&A financial due-diligence specialist: revenue concentration, debt covenants, earnings quality."),
+    "hr-risk": ("hr_risk_agent",
+                f"{AE_BASE}/{os.environ.get('HR_AGENT_ENGINE_ID','')}",
+                "M&A HR/compensation due-diligence specialist: golden parachutes, key-person dependency, retention."),
+    "ip-risk": ("ip_risk_agent",
+                f"{AE_BASE}/{os.environ.get('IP_AGENT_ENGINE_ID','')}",
+                "M&A IP due-diligence specialist: assignment gaps, ownership chains, licensing risk."),
 }
 
 
@@ -45,13 +60,19 @@ def token() -> str:
 
 def main() -> None:
     headers = {"Authorization": f"Bearer {token()}", "Content-Type": "application/json"}
-    for name, base_url in AGENTS.items():
-        card = httpx.get(f"{base_url}/.well-known/agent-card.json", timeout=15).json()
-        # The card's advertised URL must be the canonical reachable endpoint.
-        card["url"] = base_url
-        if "supportedInterfaces" in card:
-            for iface in card["supportedInterfaces"]:
-                iface["url"] = base_url
+    for name, (agent_name, endpoint, description) in AGENTS.items():
+        card = {
+            "name": agent_name,
+            "description": description,
+            "url": endpoint,
+            "version": "0.1.0",
+            "protocolVersion": "0.3.0",
+            "preferredTransport": "HTTP+JSON",
+            "capabilities": {"streaming": False},
+            "defaultInputModes": ["text/plain"],
+            "defaultOutputModes": ["text/plain"],
+            "skills": [],
+        }
         service_id = f"dealguard-{name}"
         # idempotent: delete an existing registration first, then recreate
         httpx.delete(f"{BASE}/services/{service_id}", headers=headers, timeout=30)

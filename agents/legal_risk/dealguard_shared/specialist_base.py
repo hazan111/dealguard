@@ -34,9 +34,11 @@ STRICT RULES:
 
 
 def build_specialist(*, name: str, description: str, domain_instruction: str) -> LlmAgent:
-    # Gemini 3.5 models are only served from the global endpoint on this project.
+    # Gemini 3.5 models are only served from the global endpoint on this
+    # project. Force (not setdefault): Agent Engine containers preset
+    # GOOGLE_CLOUD_LOCATION=us-central1, which would 404 the model.
     os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "1")
-    os.environ.setdefault("GOOGLE_CLOUD_LOCATION", os.environ.get("GEMINI_LOCATION", "global"))
+    os.environ["GOOGLE_CLOUD_LOCATION"] = os.environ.get("GEMINI_LOCATION", "global")
     return LlmAgent(
         name=name,
         model=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"),

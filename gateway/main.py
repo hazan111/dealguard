@@ -109,7 +109,7 @@ def ingest(req: IngestRequest, x_dealguard_token: str | None = Header(default=No
         "text": req.text,
         "model_armor_verdict": "clean",
     }
-    from a2a_client import a2a_send  # local copy, see note in a2a_client.py
+    from dealguard_shared.a2a_client import a2a_send
     reply = a2a_send(ORCHESTRATOR_A2A_URL, json.dumps(payload),
                      timeout_s=float(os.environ.get("ORCHESTRATOR_TIMEOUT_S", "300")),
                      idempotency_key=f"gw-{req.document_id}-{text_hash[:8]}",

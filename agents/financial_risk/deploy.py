@@ -32,8 +32,7 @@ vertexai.init(project=PROJECT, location="us-central1",
 
 AGENT_NAME = os.path.basename(HERE)
 
-env_vars = {
-    "GOOGLE_CLOUD_PROJECT": PROJECT,
+env_vars = {  # GOOGLE_CLOUD_PROJECT is reserved — Agent Engine sets it itself
     "GEMINI_LOCATION": "global",
     "GEMINI_MODEL": os.environ.get("GEMINI_MODEL", "gemini-3.5-flash"),
     "FIRESTORE_DATABASE": os.environ.get("FIRESTORE_DATABASE", "dealguard"),

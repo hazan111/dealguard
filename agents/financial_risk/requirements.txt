@@ -1,0 +1,6 @@
+google-cloud-aiplatform[adk,agent_engines]
+google-adk[a2a]
+google-cloud-firestore
+httpx
+uvicorn
+sse-starlette

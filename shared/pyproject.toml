@@ -1,0 +1,13 @@
+[project]
+name = "dealguard-shared"
+version = "0.1.0"
+description = "Shared config, schemas, Firestore client and citation verification for DealGuard services"
+requires-python = ">=3.11"
+dependencies = ["google-cloud-firestore>=2.16", "pydantic>=2.7"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["dealguard_shared*"]

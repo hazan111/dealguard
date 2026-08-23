@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: dealguard-shared
+Version: 0.1.0
+Summary: Shared config, schemas, Firestore client and citation verification for DealGuard services
+Requires-Python: >=3.11
+Requires-Dist: google-cloud-firestore>=2.16
+Requires-Dist: pydantic>=2.7

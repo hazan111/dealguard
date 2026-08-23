@@ -1,0 +1,12 @@
+pyproject.toml
+dealguard_shared/__init__.py
+dealguard_shared/citation.py
+dealguard_shared/config.py
+dealguard_shared/firestore_client.py
+dealguard_shared/schemas.py
+dealguard_shared.egg-info/PKG-INFO
+dealguard_shared.egg-info/SOURCES.txt
+dealguard_shared.egg-info/dependency_links.txt
+dealguard_shared.egg-info/requires.txt
+dealguard_shared.egg-info/top_level.txt
+tests/test_citation.py

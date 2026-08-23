@@ -178,9 +178,9 @@ def generate_briefing(user: str = Depends(require_user)):
         audio_config=texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3),
     )
     client = storage.Client(project=config.project)
+    # No bucket.exists() probe: the runtime SA holds object-level roles only
+    # (storage.buckets.get would 403). The bucket is provisioned at setup.
     bucket = client.bucket(GCS_BUCKET)
-    if not bucket.exists():
-        bucket = client.create_bucket(GCS_BUCKET, location="us-central1")
     bid_blob = f"briefings/{int(time.time())}.mp3"
     bucket.blob(bid_blob).upload_from_string(audio.audio_content, content_type="audio/mpeg")
     bid = store.save_briefing(script_text=script, audio_url=f"gs://{GCS_BUCKET}/{bid_blob}")

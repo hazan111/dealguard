@@ -1,5 +1,16 @@
 # DealGuard — Master Task List
 
+> **STATUS (2026-08-23):** Phases 0–10 are COMPLETE and verified against the live
+> cloud stack (5 agents on Agent Engine speaking native A2A, gateway/watcher/
+> dashboard API on Cloud Run, full 6-document scenario run end-to-end in the
+> cloud, Model Armor blocking the poisoned document, Schedule of Exceptions
+> written to a real Google Doc, voice briefing generated and played).
+> Remaining: Phase 11's *Drive drag-and-drop* leg (a human must drop the PDFs —
+> service accounts cannot own Drive files; everything downstream is verified),
+> Phase 12 formal observability check, Phase 13 video + Devpost + diagram.
+> Deviations and discoveries: `ARCHITECTURE.md` §12.
+
+
 Authoritative, ordered build plan. Work in order — later phases depend on earlier ones. If something seems ambiguous, check `README.md`, `ARCHITECTURE.md`, `SCENARIO.md`, `DESIGN_SYSTEM.md` before assuming.
 
 ---

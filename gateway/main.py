@@ -19,9 +19,7 @@ from dealguard_shared.config import load_dotenv
 
 load_dotenv()
 
-import uuid
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 from dealguard_shared import firestore_client as store
@@ -33,6 +31,16 @@ import model_armor_client
 app = FastAPI(title="DealGuard Gateway (Agent Gateway substitute)")
 
 ORCHESTRATOR_A2A_URL = os.environ.get("ORCHESTRATOR_A2A_URL", "http://127.0.0.1:8100")
+# Shared-secret auth between drive-watcher and gateway. Fail closed: if the
+# token is not configured, ingestion is refused rather than left open.
+SERVICE_TOKEN = os.environ.get("SERVICE_TOKEN", "")
+
+
+def require_service_token(x_dealguard_token: str | None) -> None:
+    if not SERVICE_TOKEN:
+        raise HTTPException(503, "SERVICE_TOKEN not configured — ingestion disabled")
+    if x_dealguard_token != SERVICE_TOKEN:
+        raise HTTPException(403, "bad service token")
 
 
 class IngestRequest(BaseModel):
@@ -65,7 +73,8 @@ def healthz():
 
 
 @app.post("/ingest")
-def ingest(req: IngestRequest):
+def ingest(req: IngestRequest, x_dealguard_token: str | None = Header(default=None)):
+    require_service_token(x_dealguard_token)
     text_hash = store.content_hash(req.text)
     if store.document_already_processed(req.document_id, text_hash):
         return {"status": "duplicate", "document_id": req.document_id}

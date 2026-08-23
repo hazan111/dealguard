@@ -32,6 +32,7 @@ from pypdf import PdfReader
 from dealguard_shared.config import config
 
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "http://127.0.0.1:8080")
+SERVICE_TOKEN = os.environ.get("SERVICE_TOKEN", "")
 POLL_INTERVAL_S = float(os.environ.get("POLL_INTERVAL_S", "0"))
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "")  # this service's own https URL, for push channels
 CHANNEL_TOKEN = os.environ.get("DRIVE_WATCH_CHANNEL_TOKEN", "")
@@ -95,7 +96,7 @@ def scan_folder() -> list[dict]:
                     "name": file["name"],
                     "drive_url": file.get("webViewLink", ""),
                     "text": text,
-                }, timeout=600.0)
+                }, headers={"X-DealGuard-Token": SERVICE_TOKEN}, timeout=600.0)
                 r.raise_for_status()
                 outcome = r.json()
                 _seen[file["id"]] = marker
@@ -115,8 +116,9 @@ def healthz():
 
 @app.post("/notifications")
 async def notifications(request: Request):
-    """Drive push notification receiver."""
-    if CHANNEL_TOKEN and request.headers.get("X-Goog-Channel-Token") != CHANNEL_TOKEN:
+    """Drive push notification receiver. Fail closed: without a configured
+    channel token, notifications are rejected rather than trusted."""
+    if not CHANNEL_TOKEN or request.headers.get("X-Goog-Channel-Token") != CHANNEL_TOKEN:
         return Response(status_code=403)
     state = request.headers.get("X-Goog-Resource-State", "")
     if state == "sync":  # channel handshake
@@ -126,14 +128,14 @@ async def notifications(request: Request):
 
 
 @app.post("/scan")
-async def manual_scan():
+async def manual_scan(request: Request):
     """Manual trigger (used in local dev and as a demo safety valve)."""
+    if not CHANNEL_TOKEN or request.headers.get("X-DealGuard-Token") != CHANNEL_TOKEN:
+        return Response(status_code=403)
     return {"processed": await asyncio.to_thread(scan_folder)}
 
 
-@app.post("/watch/renew")
-def watch_renew():
-    """(Re-)register the Drive watch channel pointing at PUBLIC_URL/notifications."""
+def _register_watch() -> dict:
     if not PUBLIC_URL:
         return {"error": "PUBLIC_URL not set — push mode disabled"}
     drive = _drive()
@@ -146,11 +148,19 @@ def watch_renew():
     return {"channel": channel}
 
 
+@app.post("/watch/renew")
+def watch_renew(request: Request):
+    """(Re-)register the Drive watch channel pointing at PUBLIC_URL/notifications."""
+    if not CHANNEL_TOKEN or request.headers.get("X-DealGuard-Token") != CHANNEL_TOKEN:
+        return Response(status_code=403)
+    return _register_watch()
+
+
 @app.on_event("startup")
 async def startup():
     if PUBLIC_URL:
         try:
-            watch_renew()
+            _register_watch()
         except Exception as exc:  # noqa: BLE001 — fall back to poll/manual rather than crash
             print(f"watch registration failed: {exc}")
     if POLL_INTERVAL_S > 0:

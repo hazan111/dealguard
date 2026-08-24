@@ -1,45 +1,45 @@
 import type { ReactNode } from 'react'
 
 export const domainMeta: Record<string, { label: string; color: string; soft: string }> = {
-  legal: { label: 'Legal', color: 'var(--color-legal)', soft: 'oklch(0.94 0.025 275)' },
-  financial: { label: 'Financial', color: 'var(--color-financial)', soft: 'oklch(0.955 0.040 80)' },
-  hr: { label: 'HR / Comp', color: 'var(--color-hr)', soft: 'oklch(0.950 0.028 155)' },
-  ip: { label: 'IP', color: 'var(--color-ip)', soft: 'oklch(0.945 0.030 340)' },
-  unclassified: { label: 'Unclassified', color: 'var(--color-ink-3)', soft: 'var(--color-sunk)' },
+  legal: { label: 'Legal', color: 'var(--color-legal)', soft: 'var(--color-quiet)' },
+  financial: { label: 'Financial', color: 'var(--color-financial)', soft: 'var(--color-quiet)' },
+  hr: { label: 'HR / Comp', color: 'var(--color-hr)', soft: 'var(--color-quiet)' },
+  ip: { label: 'IP', color: 'var(--color-ip)', soft: 'var(--color-quiet)' },
+  unclassified: { label: 'Unclassified', color: 'var(--color-ink-3)', soft: 'var(--color-quiet)' },
 }
 
-export function SeverityChip({ severity }: { severity: string }) {
+export function SeverityTag({ severity }: { severity: string }) {
   const s: Record<string, string> = {
     high: 'bg-high-soft text-high',
-    medium: 'bg-med-soft text-med',
-    low: 'bg-low-soft text-ink-2',
+    medium: 'bg-quiet text-ink',
+    low: 'bg-quiet text-ink-3',
   }
-  return <span className={`chip ${s[severity] ?? s.low}`}><span className="dot" />{severity}</span>
+  return <span className={`tag ${s[severity] ?? s.low}`}><span className="dot" />{severity}</span>
 }
 
-export function StatusChip({ status }: { status: string }) {
+export function StatusTag({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string }> = {
-    open: { cls: 'bg-sunk text-ink-2', label: 'Open' },
-    needs_review: { cls: 'bg-med-soft text-med', label: 'Needs review' },
-    under_review: { cls: 'bg-med-soft text-med', label: 'Under review' },
-    resolved: { cls: 'bg-ok-soft text-ok', label: 'Resolved' },
+    open: { cls: 'border border-line-2 text-ink-2', label: 'Open' },
+    needs_review: { cls: 'bg-high-soft text-high', label: 'Needs review' },
+    under_review: { cls: 'bg-high-soft text-high', label: 'Under review' },
+    resolved: { cls: 'bg-quiet text-ink-2', label: 'Resolved' },
   }
   const s = map[status] ?? map.open
-  return <span className={`chip ${s.cls}`}>{s.label}</span>
+  return <span className={`tag ${s.cls}`}>{s.label}</span>
 }
 
-export function DomainChip({ domain }: { domain: string }) {
+export function DomainTag({ domain }: { domain: string }) {
   const m = domainMeta[domain] ?? domainMeta.unclassified
   return (
-    <span className="chip" style={{ background: m.soft, color: m.color }}>
-      <span className="dot" />{m.label}
+    <span className="tag bg-quiet text-ink-2">
+      <span className="dot" style={{ background: m.color }} />{m.label}
     </span>
   )
 }
 
 export function Button({ children, onClick, variant = 'primary', disabled, type = 'button', title }: {
   children: ReactNode; onClick?: () => void
-  variant?: 'primary' | 'soft' | 'ok' | 'quiet'; disabled?: boolean
+  variant?: 'primary' | 'outline' | 'ok' | 'ghost'; disabled?: boolean
   type?: 'button' | 'submit'; title?: string
 }) {
   return (
@@ -49,12 +49,26 @@ export function Button({ children, onClick, variant = 'primary', disabled, type 
   )
 }
 
-export function CardHead({ title, hint, right }: { title: string; hint?: string; right?: ReactNode }) {
+export function Segmented({ value, onChange, options }: {
+  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]
+}) {
   return (
-    <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="seg">
+      {options.map(o => (
+        <button key={o.value} data-on={value === o.value} onClick={() => onChange(o.value)} className="seg-item">
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function CellHead({ title, hint, right }: { title: string; hint?: string; right?: ReactNode }) {
+  return (
+    <div className="mb-6 flex items-start justify-between gap-4">
       <div>
         <h2 className="label">{title}</h2>
-        {hint && <p className="mt-1.5 text-[12.5px] leading-4 text-ink-3">{hint}</p>}
+        {hint && <p className="mt-2 max-w-[46ch] text-[12.5px] leading-[1.5] text-ink-3">{hint}</p>}
       </div>
       {right}
     </div>

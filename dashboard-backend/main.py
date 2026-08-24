@@ -104,6 +104,8 @@ def documents(user: str = Depends(require_user)):
 def summary(user: str = Depends(require_user)):
     findings = store.list_findings()
     docs = [s.to_dict() for s in store.db().collection("documents").stream()]
+    by_domain = {d: sum(1 for f in findings if f.get("domain") == d)
+                 for d in ("legal", "financial", "hr", "ip")}
     return {
         "total_findings": len(findings),
         "open_risks": sum(1 for f in findings if f.get("status") == "open"),
@@ -111,6 +113,8 @@ def summary(user: str = Depends(require_user)):
         "resolved": sum(1 for f in findings if f.get("status") == "resolved"),
         "documents_processed": len(docs),
         "blocked_injections": sum(1 for d in docs if d.get("model_armor_verdict") == "blocked"),
+        "by_domain": by_domain,
+        "timeline_events": len(store.list_timeline(1000)),
     }
 
 

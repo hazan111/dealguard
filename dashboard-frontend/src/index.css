@@ -1,99 +1,114 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Outfit:wght@300;400;500;600&display=swap');
+/* Satoshi + JetBrains Mono are linked from index.html (Vite strips remote CSS @imports at build). */
 
 @theme {
-  --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
-  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
-  /* Ground: warm oat paper. Cards float above it. */
-  --color-ground: oklch(0.962 0.012 85);
-  --color-card: oklch(0.995 0.003 85);
-  --color-sunk: oklch(0.975 0.008 85);
-  --color-hair: oklch(0.92 0.010 85);
+  --color-page: oklch(0.975 0.002 270);
+  --color-surface: oklch(1 0 0);
+  --color-quiet: oklch(0.968 0.003 270);
+  --color-line: oklch(0.922 0.004 270);
+  --color-line-2: oklch(0.865 0.006 270);
 
-  --color-ink: oklch(0.26 0.018 275);
-  --color-ink-2: oklch(0.50 0.020 275);
-  --color-ink-3: oklch(0.66 0.018 275);
+  --color-ink: oklch(0.17 0.008 270);
+  --color-ink-2: oklch(0.53 0.012 270);
+  --color-ink-3: oklch(0.68 0.010 270);
 
-  --color-accent: oklch(0.38 0.095 275);
-  --color-accent-hover: oklch(0.32 0.095 275);
-  --color-accent-soft: oklch(0.93 0.030 275);
+  --color-accent: oklch(0.52 0.215 265);
+  --color-accent-soft: oklch(0.955 0.025 265);
 
-  /* Severity */
-  --color-high: oklch(0.57 0.170 25);
-  --color-high-soft: oklch(0.945 0.035 30);
-  --color-med: oklch(0.73 0.140 70);
-  --color-med-soft: oklch(0.960 0.045 80);
-  --color-low: oklch(0.66 0.030 85);
-  --color-low-soft: oklch(0.955 0.010 85);
+  /* One saturated colour in the whole product: red means "needs your attention".
+     Everything else separates by weight on a neutral ramp. */
+  --color-high: oklch(0.55 0.205 27);
+  --color-high-soft: oklch(0.955 0.028 27);
+  --color-med: oklch(0.40 0.012 270);
+  --color-med-soft: oklch(0.945 0.004 270);
+  --color-low: oklch(0.72 0.010 270);
+  --color-low-soft: oklch(0.962 0.004 270);
 
-  /* Domains */
-  --color-legal: oklch(0.50 0.100 275);
-  --color-financial: oklch(0.70 0.120 75);
-  --color-hr: oklch(0.58 0.100 155);
-  --color-ip: oklch(0.52 0.130 340);
+  /* Departments read as four steps of ink, not four hues. */
+  --color-legal: oklch(0.24 0.012 270);
+  --color-financial: oklch(0.44 0.010 270);
+  --color-hr: oklch(0.62 0.008 270);
+  --color-ip: oklch(0.78 0.006 270);
 
-  --color-ok: oklch(0.58 0.120 155);
-  --color-ok-soft: oklch(0.950 0.030 155);
+  --color-ok: oklch(0.40 0.012 270);
+  --color-ok-soft: oklch(0.945 0.004 270);
 
-  --radius-card: 24px;
-  --radius-inner: 14px;
-
-  --shadow-card: 0 1px 2px oklch(0.40 0.03 85 / 0.05), 0 14px 34px -18px oklch(0.40 0.03 85 / 0.22);
-  --shadow-lift: 0 2px 4px oklch(0.40 0.03 85 / 0.06), 0 22px 48px -20px oklch(0.40 0.03 85 / 0.28);
-
-  --ease-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html { font-size: 15px; }
 
 body {
-  @apply bg-ground text-ink font-sans antialiased;
+  @apply bg-page text-ink font-sans antialiased;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.011em;
 }
 
-.display { font-family: var(--font-display); font-variation-settings: 'opsz' 96, 'SOFT' 30; letter-spacing: -0.015em; }
-.quote { font-family: var(--font-display); font-style: italic; font-variation-settings: 'opsz' 14; }
+h1, h2, .tight { letter-spacing: -0.03em; }
 
 .label {
-  @apply text-[10.5px] font-medium uppercase text-ink-3;
-  letter-spacing: 0.12em;
+  @apply text-[11px] font-medium uppercase text-ink-3;
+  letter-spacing: 0.08em;
 }
+.mono { @apply font-mono text-[12px]; letter-spacing: 0; }
 
-.card {
-  @apply rounded-[var(--radius-card)] bg-card p-6;
-  box-shadow: var(--shadow-card);
-}
+/* Grid shell: hard hairlines, no shadows. */
+.grid-shell { @apply overflow-hidden rounded-[18px] border-t border-l border-line bg-surface; }
+.cell { @apply border-r border-b border-line p-7; }
 
+/* Controls */
 .btn {
-  @apply inline-flex h-9 items-center gap-2 rounded-full px-4 text-[13px] font-medium;
-  transition: background-color 180ms var(--ease-quart), color 180ms var(--ease-quart), box-shadow 180ms var(--ease-quart);
+  @apply inline-flex h-9 shrink-0 items-center gap-2 rounded-[10px] px-3.5 text-[13px] font-medium;
+  transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), border-color 200ms var(--ease-out), transform 200ms var(--ease-out);
 }
+.btn:active { transform: scale(0.985); }
 .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.btn:disabled { @apply cursor-not-allowed opacity-45; }
-.btn-primary { @apply bg-accent text-white hover:bg-accent-hover; }
-.btn-soft { @apply bg-sunk text-ink hover:bg-accent-soft; }
+.btn:disabled { @apply cursor-not-allowed opacity-40; }
+.btn-primary { @apply bg-ink text-white hover:bg-ink/88; }
+.btn-outline { @apply border border-line-2 bg-surface text-ink hover:bg-quiet; }
 .btn-ok { @apply bg-ok text-white hover:brightness-95; }
-.btn-quiet { @apply text-ink-2 hover:bg-sunk hover:text-ink; }
+.btn-ghost { @apply text-ink-2 hover:bg-quiet hover:text-ink; }
 
-.chip {
-  @apply inline-flex h-[22px] items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium whitespace-nowrap;
+.seg { @apply inline-flex h-9 items-center gap-0.5 rounded-[11px] bg-quiet p-1; }
+.seg-item {
+  @apply flex h-7 items-center rounded-[8px] px-3 text-[12.5px] font-medium text-ink-3;
+  transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out);
 }
-.chip .dot { @apply h-[7px] w-[7px] rounded-full; background: currentColor; }
+.seg-item:hover { @apply text-ink; }
+.seg-item[data-on='true'] { @apply bg-surface text-ink; box-shadow: 0 1px 2px oklch(0 0 0 / 0.06), 0 0 0 1px oklch(0 0 0 / 0.04); }
 
-.rowlink { transition: background-color 160ms var(--ease-quart); }
-.rowlink:hover { @apply bg-sunk; }
+.field {
+  @apply h-9 rounded-[10px] border border-line-2 bg-surface px-3 text-[13px] text-ink outline-none;
+  transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.field::placeholder { @apply text-ink-3; }
+.field:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
 
-/* Page-load choreography: cards settle in, once. */
-.rise { animation: rise 520ms var(--ease-quart) both; }
-@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.tag {
+  @apply inline-flex h-[21px] items-center gap-1.5 rounded-[6px] px-1.5 text-[11px] font-medium whitespace-nowrap;
+}
+.tag .dot { @apply h-[6px] w-[6px] rounded-full; background: currentColor; }
 
-.drawer-in { animation: drawer 260ms var(--ease-quart) both; }
-@keyframes drawer { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.hoverable { transition: background-color 180ms var(--ease-out); }
+.hoverable:hover { @apply bg-quiet; }
+
+/* Iconly-style floating action that appears on cell hover */
+.reveal { @apply pointer-events-none absolute opacity-0; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); transform: translateY(4px); }
+.group:hover .reveal { @apply pointer-events-auto opacity-100; transform: none; }
+
+.rise { animation: rise 460ms var(--ease-out) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.slide-in { animation: slide 280ms var(--ease-out) both; }
+@keyframes slide { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--color-hair); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-thumb { background: var(--color-line-2); border-radius: 999px; border: 3.5px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-3); background-clip: content-box; }

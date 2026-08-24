@@ -1,34 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Download, ExternalLink, FileCheck2, Link2, X } from 'lucide-react'
+import { Check, Download, ExternalLink, FileCheck2, Link2, Search, X } from 'lucide-react'
 import { api, downloadCsv, type Finding } from '../api'
-import { Button, DomainChip, SeverityChip, StatusChip } from '../components/ui'
+import { Button, DomainTag, Segmented, SeverityTag, StatusTag } from '../components/ui'
 
 const severityRank = { high: 0, medium: 1, low: 2 }
 
-function Pills({ value, onChange, options }: {
-  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {options.map(o => (
-        <button key={o.value} onClick={() => onChange(o.value)}
-          className={`h-8 rounded-full px-3.5 text-[12.5px] font-medium transition-colors duration-200 ${
-            value === o.value ? 'bg-accent text-white' : 'bg-sunk text-ink-2 hover:text-ink'
-          }`}>
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 export default function RiskRegister() {
   const [findings, setFindings] = useState<Finding[]>([])
-  const [domain, setDomain] = useState('all')
-  const [status, setStatus] = useState('all')
   const [params, setParams] = useSearchParams()
+  const domain = params.get('domain') ?? 'all'
   const selectedId = params.get('f')
+  const [status, setStatus] = useState('all')
+  const [query, setQuery] = useState('')
   const [confirmResolve, setConfirmResolve] = useState(false)
   const [busy, setBusy] = useState(false)
   const [exceptionUrl, setExceptionUrl] = useState<string | null>(null)
@@ -44,19 +28,27 @@ export default function RiskRegister() {
     return () => clearInterval(timer)
   }, [refresh])
 
-  const rows = useMemo(() =>
-    findings
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return findings
       .filter(f => domain === 'all' || f.domain === domain)
       .filter(f => status === 'all' || f.status === status)
-      .sort((a, b) => severityRank[a.severity] - severityRank[b.severity]),
-    [findings, domain, status])
+      .filter(f => !q || `${f.summary} ${f.red_flag_pattern} ${f.document_name} ${f.entities.join(' ')}`.toLowerCase().includes(q))
+      .sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
+  }, [findings, domain, status, query])
 
   const byId = useMemo(() => new Map(findings.map(f => [f.id, f])), [findings])
   const selected = selectedId ? byId.get(selectedId) ?? null : null
 
+  function setParam(key: string, value: string | null) {
+    const next = new URLSearchParams(params)
+    if (value && value !== 'all') next.set(key, value); else next.delete(key)
+    setParams(next)
+  }
+
   function select(id: string | null) {
     setConfirmResolve(false); setExceptionUrl(null)
-    if (id) setParams({ f: id }); else setParams({})
+    setParam('f', id)
   }
 
   async function resolve(f: Finding) {
@@ -85,83 +77,94 @@ export default function RiskRegister() {
     : []
 
   return (
-    <div className="mx-auto max-w-[1320px] pb-8">
-      <header className="rise mb-6 flex flex-wrap items-end justify-between gap-5 px-2 pt-2">
+    <div className="px-8 py-7">
+      <header className="rise mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="label">{rows.length} of {findings.length} findings</p>
-          <h1 className="display mt-2 text-[34px] leading-none">Risk register</h1>
+          <h1 className="tight text-[30px] font-bold leading-none">Risk register</h1>
+          <p className="mt-2.5 text-[13.5px] text-ink-2">
+            {rows.length} of {findings.length} findings · sorted by severity
+          </p>
         </div>
-        <Button variant="soft" onClick={downloadCsv}><Download size={14} /> Export CSV</Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search findings"
+              className="field w-[220px] pl-8" />
+          </div>
+          <Segmented value={status} onChange={setStatus} options={[
+            { value: 'all', label: 'All' }, { value: 'open', label: 'Open' },
+            { value: 'needs_review', label: 'Review' }, { value: 'resolved', label: 'Resolved' },
+          ]} />
+          <Button variant="outline" onClick={downloadCsv}><Download size={14} /> CSV</Button>
+        </div>
       </header>
 
-      <div className={`grid gap-5 ${selected ? 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_452px]' : 'grid-cols-1'}`}>
-        <div className="card rise">
-          <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Pills value={domain} onChange={setDomain} options={[
-              { value: 'all', label: 'All' }, { value: 'legal', label: 'Legal' },
+      <div className={`rise grid gap-6 ${selected ? 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_444px]' : 'grid-cols-1'}`}>
+        <div className="grid-shell">
+          <div className="flex flex-wrap items-center gap-2 border-r border-b border-line px-5 py-3.5">
+            <Segmented value={domain} onChange={v => setParam('domain', v)} options={[
+              { value: 'all', label: 'All departments' }, { value: 'legal', label: 'Legal' },
               { value: 'financial', label: 'Financial' }, { value: 'hr', label: 'HR / Comp' }, { value: 'ip', label: 'IP' },
-            ]} />
-            <div className="h-5 w-px bg-hair" />
-            <Pills value={status} onChange={setStatus} options={[
-              { value: 'all', label: 'Any status' }, { value: 'open', label: 'Open' },
-              { value: 'needs_review', label: 'Needs review' }, { value: 'resolved', label: 'Resolved' },
             ]} />
           </div>
 
-          <ul className="-mx-3 flex flex-col">
+          <ul>
             {rows.map(f => {
               const active = selected?.id === f.id
               return (
                 <li key={f.id} onClick={() => select(f.id)}
-                  className={`cursor-pointer rounded-[var(--radius-inner)] px-3 py-3.5 transition-colors duration-200 ${active ? 'bg-accent-soft' : 'hover:bg-sunk'}`}>
-                  <div className="flex items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] leading-[1.45]">{f.summary}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <SeverityChip severity={f.severity} />
-                        <DomainChip domain={f.domain} />
-                        <StatusChip status={f.status} />
+                  className={`cursor-pointer border-r border-b border-line px-5 py-4 transition-colors duration-200 ${active ? 'bg-accent-soft' : 'hover:bg-quiet'}`}>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] leading-[1.5]">{f.summary}</p>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        <SeverityTag severity={f.severity} />
+                        <DomainTag domain={f.domain} />
+                        <StatusTag status={f.status} />
                         <span className="text-[11.5px] text-ink-3">{f.red_flag_pattern}</span>
                         {f.cross_referenced_finding_ids.length > 0 && (
-                          <span className="inline-flex items-center gap-1 text-[11.5px] text-accent">
+                          <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-accent">
                             <Link2 size={11} />{f.cross_referenced_finding_ids.length}
                           </span>
                         )}
                       </div>
                     </div>
+                    <span className="mono hidden shrink-0 text-ink-3 lg:block">{f.document_name}</span>
                   </div>
                 </li>
               )
             })}
             {rows.length === 0 && (
-              <li className="py-14 text-center text-[13px] text-ink-3">Nothing matches these filters.</li>
+              <li className="border-r border-b border-line px-5 py-16 text-center text-[13px] text-ink-3">
+                Nothing matches these filters.
+              </li>
             )}
           </ul>
         </div>
 
         {selected && (
-          <aside className="drawer-in card h-fit xl:sticky xl:top-5">
+          <aside className="slide-in h-fit rounded-[18px] border border-line bg-surface p-6 xl:sticky xl:top-7">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <SeverityChip severity={selected.severity} />
-                <DomainChip domain={selected.domain} />
-                <StatusChip status={selected.status} />
+                <SeverityTag severity={selected.severity} />
+                <DomainTag domain={selected.domain} />
+                <StatusTag status={selected.status} />
               </div>
               <button onClick={() => select(null)} aria-label="Close"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-sunk hover:text-ink">
+                className="flex h-8 w-8 items-center justify-center rounded-[9px] text-ink-3 transition-colors hover:bg-quiet hover:text-ink">
                 <X size={16} />
               </button>
             </div>
 
-            <h2 className="display text-[21px] leading-[1.25]">{selected.summary}</h2>
+            <h2 className="tight text-[19px] font-bold leading-[1.3]">{selected.summary}</h2>
             <p className="mt-2 text-[12.5px] text-ink-3">{selected.red_flag_pattern}</p>
 
-            <div className="mt-6 rounded-[var(--radius-inner)] bg-sunk p-4">
+            <div className="mt-6 rounded-[12px] border border-line bg-quiet p-4">
               <p className="label">From the document</p>
-              <p className="quote mt-2 text-[14.5px] leading-[1.6]">{selected.citation}</p>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hair pt-3">
-                <span className="text-[12px] text-ink-3">{selected.document_name}</span>
-                <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${selected.citation_verified ? 'text-ok' : 'text-med'}`}>
+              <p className="mono mt-2.5 leading-[1.65] text-ink">{selected.citation}</p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                <span className="mono text-ink-3">{selected.document_name}</span>
+                <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${selected.citation_verified ? 'text-ink-2' : 'text-high'}`}>
                   {selected.citation_verified ? <><Check size={13} /> Found in source</> : <><X size={13} /> Not found in source</>}
                 </span>
               </div>
@@ -170,13 +173,13 @@ export default function RiskRegister() {
             {linked.length > 0 && (
               <div className="mt-6">
                 <p className="label">Linked across departments</p>
-                <ul className="mt-2.5 flex flex-col gap-2">
+                <ul className="mt-2.5 overflow-hidden rounded-[12px] border border-line">
                   {linked.map(o => (
                     <li key={o.id} onClick={() => select(o.id)}
-                      className="cursor-pointer rounded-[var(--radius-inner)] bg-sunk p-3 transition-colors hover:bg-accent-soft">
+                      className="hoverable cursor-pointer border-b border-line p-3.5 last:border-0">
                       <div className="mb-1.5 flex items-center gap-2">
-                        <DomainChip domain={o.domain} />
-                        <SeverityChip severity={o.severity} />
+                        <DomainTag domain={o.domain} />
+                        <SeverityTag severity={o.severity} />
                       </div>
                       <p className="line-clamp-2 text-[12.5px] leading-[1.45] text-ink-2">{o.summary}</p>
                     </li>
@@ -185,22 +188,21 @@ export default function RiskRegister() {
               </div>
             )}
 
-            <div className="mt-6 flex flex-col gap-3">
-              <div className="flex items-baseline justify-between">
-                <span className="label">Suggested treatment</span>
-                <span className="text-[13.5px] font-medium capitalize">{selected.recommended_action}</span>
-              </div>
-              {selected.suggested_followup_question && (
-                <div>
-                  <span className="label">Ask the seller</span>
-                  <p className="quote mt-1.5 text-[14px] leading-[1.55] text-ink-2">{selected.suggested_followup_question}</p>
-                </div>
-              )}
+            <div className="mt-6 flex items-baseline justify-between border-b border-line pb-3">
+              <span className="label">Suggested treatment</span>
+              <span className="text-[13.5px] font-medium capitalize">{selected.recommended_action}</span>
             </div>
 
-            <div className="mt-6 flex flex-col gap-3 border-t border-hair pt-5">
+            {selected.suggested_followup_question && (
+              <div className="mt-4">
+                <p className="label">Ask the seller</p>
+                <p className="mt-2 text-[13px] leading-[1.6] text-ink-2">{selected.suggested_followup_question}</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-line pt-5">
               <div className="flex flex-wrap items-center gap-3">
-                <Button variant="soft" onClick={() => draftException(selected)} disabled={busy || selected.drafted_to_exceptions}>
+                <Button variant="outline" onClick={() => draftException(selected)} disabled={busy || selected.drafted_to_exceptions}>
                   <FileCheck2 size={14} />
                   {selected.drafted_to_exceptions ? 'In the schedule' : 'Draft into Schedule of Exceptions'}
                 </Button>
@@ -213,17 +215,17 @@ export default function RiskRegister() {
               </div>
               {selected.status !== 'resolved' ? (
                 confirmResolve ? (
-                  <div className="rounded-[var(--radius-inner)] bg-ok-soft p-4">
+                  <div className="rounded-[12px] border border-ok/30 bg-ok-soft p-4">
                     <p className="text-[13px] leading-[1.5]">Your name goes on the record against this finding. No agent can undo it.</p>
                     <div className="mt-3 flex gap-2">
                       <Button variant="ok" onClick={() => resolve(selected)} disabled={busy}>
                         <Check size={14} /> Resolve as Maya Chen
                       </Button>
-                      <Button variant="quiet" onClick={() => setConfirmResolve(false)}>Cancel</Button>
+                      <Button variant="ghost" onClick={() => setConfirmResolve(false)}>Cancel</Button>
                     </div>
                   </div>
                 ) : (
-                  <Button variant="soft" onClick={() => setConfirmResolve(true)}>Mark resolved</Button>
+                  <Button variant="primary" onClick={() => setConfirmResolve(true)}>Mark resolved</Button>
                 )
               ) : (
                 <p className="text-[12.5px] text-ink-3">Resolved by {selected.resolved_by}</p>

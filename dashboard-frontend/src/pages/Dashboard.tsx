@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Ban, FileText, Link2, Mic, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, fetchAudio, type DocumentRecord, type Finding, type Summary, type TimelineEvent } from '../api'
-import { Button, CardHead, DomainChip, timeShort } from '../components/ui'
+import { Button, CellHead, DomainTag, SeverityTag, timeShort } from '../components/ui'
 import { Constellation, DataRoom, DomainDonut, EvidenceBars, ExposureArc } from '../components/visuals'
 
 interface Briefing { id: string; briefing_date: string; script_text: string }
@@ -73,118 +73,109 @@ export default function Dashboard() {
   const links = findings.reduce((n, f) => n + f.cross_referenced_finding_ids.length, 0) / 2 | 0
 
   return (
-    <div className="mx-auto max-w-[1320px] pb-8">
-      <header className="rise mb-6 flex flex-wrap items-end justify-between gap-6 px-2 pt-2">
+    <div className="px-8 py-7">
+      <header className="rise mb-7 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="label">Due diligence · week 3 of 4</p>
-          <h1 className="display mt-2 text-[38px] leading-[1.05]">Project Kestrel</h1>
-          <p className="mt-2 max-w-[46ch] text-[13.5px] leading-5 text-ink-2">
-            Solvane Search Partners acquiring Kestrel Robotics, a warehouse-automation company.
-            Four specialist agents are reading the data room.
+          <h1 className="tight text-[30px] font-bold leading-none">Project Kestrel</h1>
+          <p className="mt-2.5 text-[13.5px] text-ink-2">
+            Due diligence, week 3 of 4 · Solvane Search Partners acquiring Kestrel Robotics
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2 rounded-full bg-card px-4 py-2" style={{ boxShadow: 'var(--shadow-card)' }}>
-            <span className="h-2 w-2 rounded-full bg-ok" />
-            <span className="text-[12.5px] text-ink-2">Fleet live</span>
-            {events[0] && <span className="text-[12.5px] text-ink-3">· last read {timeShort(events[0].occurred_at)}</span>}
-          </div>
+          <span className="inline-flex h-9 items-center gap-2 rounded-[10px] border border-line bg-surface px-3.5 text-[12.5px] text-ink-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-ok" />
+            Fleet live
+            {events[0] && <span className="text-ink-3">· {timeShort(events[0].occurred_at)}</span>}
+          </span>
           <Button variant="primary" onClick={() => navigate('/risk-register')}>
-            Open the register <ArrowUpRight size={15} />
+            Open register <ArrowUpRight size={14} />
           </Button>
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-5">
-        <section className="card rise col-span-12 flex flex-col lg:col-span-4" style={{ animationDelay: '40ms' }}>
-          <CardHead title="Exposure" hint="Everything still open, weighted by severity" />
-          <div className="flex flex-1 items-center justify-center pb-1">
+      <div className="grid-shell rise grid grid-cols-12" style={{ animationDelay: '60ms' }}>
+        <section className="cell col-span-12 flex flex-col lg:col-span-4">
+          <CellHead title="Exposure" hint="Everything still open, split by severity" />
+          <div className="flex flex-1 items-center justify-center">
             <ExposureArc findings={findings} />
           </div>
         </section>
 
-        <section className="card rise col-span-12 flex flex-col md:col-span-6 lg:col-span-4" style={{ animationDelay: '80ms' }}>
-          <CardHead title="Where the risk sits" hint="Findings by department" />
-          <div className="flex flex-1 items-center justify-center">
+        <section className="cell col-span-12 flex flex-col md:col-span-6 lg:col-span-4">
+          <CellHead title="Where it sits" hint="Which specialist raised it" />
+          <div className="flex flex-1 items-center">
             <DomainDonut findings={findings} />
           </div>
         </section>
 
-        <section className="card rise col-span-12 md:col-span-6 lg:col-span-4" style={{ animationDelay: '120ms' }}>
-          <CardHead title="Evidence" hint="Every claim quoted verbatim from its source, or held back" />
-          <EvidenceBars findings={findings} />
-          <div className="mt-5 flex items-center gap-6 border-t border-hair pt-4">
+        <section className="cell col-span-12 flex flex-col md:col-span-6 lg:col-span-4">
+          <CellHead title="Evidence" hint="Claims quoted verbatim from the source, or held back" />
+          <div className="flex-1"><EvidenceBars findings={findings} /></div>
+          <div className="mt-6 grid grid-cols-3 gap-4 border-t border-line pt-5">
             <div>
-              <p className="display text-[26px] leading-7">{summary?.documents_processed ?? '–'}</p>
-              <p className="label mt-0.5">documents read</p>
+              <p className="tight text-[24px] font-black leading-none">{summary?.documents_processed ?? '–'}</p>
+              <p className="label mt-2">documents</p>
             </div>
             <div>
-              <p className="display text-[26px] leading-7 text-high">{summary?.blocked_injections ?? '–'}</p>
-              <p className="label mt-0.5">blocked by armor</p>
+              <p className="tight text-[24px] font-black leading-none text-high">{summary?.blocked_injections ?? '–'}</p>
+              <p className="label mt-2">blocked</p>
             </div>
             <div>
-              <p className="display text-[26px] leading-7">{links}</p>
-              <p className="label mt-0.5">cross links</p>
+              <p className="tight text-[24px] font-black leading-none">{links}</p>
+              <p className="label mt-2">cross links</p>
             </div>
           </div>
         </section>
 
-        <section className="card rise col-span-12" style={{ animationDelay: '160ms' }}>
-          <CardHead title="Data room"
-            hint="Each file is screened by Model Armor, then routed to the specialist that owns it" />
+        <section className="cell col-span-12">
+          <CellHead title="Data room"
+            hint="Model Armor screens every file before any agent reasoning touches it" />
           <DataRoom documents={documents} />
         </section>
 
-        <section className="card rise col-span-12 flex flex-col lg:col-span-7" style={{ animationDelay: '200ms' }}>
-          <CardHead title="Connected risk"
-            hint="One entity, several departments — the pattern a solo reviewer misses" />
-          <div className="flex flex-1 items-center">
-            <Constellation findings={findings} onSelect={openFinding} />
-          </div>
+        <section className="cell col-span-12">
+          <CellHead title="Connected risk"
+            hint="One entity surfacing in several departments — the pattern a solo reviewer misses" />
+          <Constellation findings={findings} onSelect={openFinding} />
         </section>
 
-        <section className="card rise col-span-12 lg:col-span-5" style={{ animationDelay: '240ms' }}>
-          <CardHead title="Highest severity first"
-            right={<Button variant="quiet" onClick={() => navigate('/risk-register')}>All {findings.length}</Button>} />
-          <ul className="-mx-2 flex flex-col">
+        <section className="cell col-span-12 lg:col-span-7">
+          <CellHead title="Highest severity first"
+            right={<Button variant="ghost" onClick={() => navigate('/risk-register')}>All {findings.length}</Button>} />
+          <ul className="-mx-2.5">
             {open.slice(0, 5).map(f => (
               <li key={f.id} onClick={() => openFinding(f.id)}
-                className="rowlink cursor-pointer rounded-[var(--radius-inner)] px-2 py-2.5">
-                <div className="flex items-start gap-3">
-                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ background: f.severity === 'high' ? 'var(--color-high)' : f.severity === 'medium' ? 'var(--color-med)' : 'var(--color-low)' }} />
-                  <div className="min-w-0">
-                    <p className="line-clamp-2 text-[13px] leading-[1.45]">{f.summary}</p>
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <DomainChip domain={f.domain} />
-                      {f.cross_referenced_finding_ids.length > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[11.5px] text-ink-3">
-                          <Link2 size={11} />{f.cross_referenced_finding_ids.length} linked
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                className="hoverable cursor-pointer rounded-[10px] px-2.5 py-2.5">
+                <p className="line-clamp-2 text-[13px] leading-[1.45]">{f.summary}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <SeverityTag severity={f.severity} />
+                  <DomainTag domain={f.domain} />
+                  {f.cross_referenced_finding_ids.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[11.5px] text-ink-3">
+                      <Link2 size={11} />{f.cross_referenced_finding_ids.length}
+                    </span>
+                  )}
                 </div>
               </li>
             ))}
-            {open.length === 0 && <li className="py-8 text-center text-[13px] text-ink-3">Nothing open. Drop a document into the data room to start.</li>}
+            {open.length === 0 && <li className="py-10 text-center text-[13px] text-ink-3">Nothing open yet.</li>}
           </ul>
         </section>
 
-        <section className="card rise col-span-12 flex flex-col lg:col-span-7" style={{ animationDelay: '280ms' }}>
-          <CardHead title="Daily briefing" hint="The day's risk state, spoken"
-            right={<Button variant="soft" onClick={generate} disabled={generating}>
+        <section className="cell col-span-12 order-last">
+          <CellHead title="Daily briefing" hint="The current risk state, spoken"
+            right={<Button variant="outline" onClick={generate} disabled={generating}>
               <Mic size={14} />{generating ? 'Generating' : briefing ? 'Regenerate' : 'Generate'}
             </Button>} />
           {briefing ? (
-            <div className="flex flex-1 items-center gap-5">
+            <div className="flex items-start gap-5">
               <button onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover">
-                {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-white transition-transform duration-200 hover:scale-105 active:scale-95">
+                {playing ? <Pause size={17} /> : <Play size={17} className="ml-0.5" />}
               </button>
               <div className="min-w-0">
-                <p className="label">{briefing.briefing_date}</p>
-                <p className={`quote mt-2 max-w-[64ch] text-[15px] leading-[1.6] text-ink ${expanded ? '' : 'line-clamp-3'}`}>
+                <p className="mono text-ink-3">{briefing.briefing_date}</p>
+                <p className={`mt-2 max-w-[68ch] text-[13.5px] leading-[1.6] text-ink-2 ${expanded ? '' : 'line-clamp-3'}`}>
                   {briefing.script_text}
                 </p>
                 <button onClick={() => setExpanded(v => !v)} className="mt-2 text-[12.5px] font-medium text-accent hover:underline">
@@ -198,22 +189,20 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section className="card rise col-span-12 lg:col-span-5" style={{ animationDelay: '320ms' }}>
-          <CardHead title="Activity"
-            right={<Button variant="quiet" onClick={() => navigate('/audit-trail')}>Full trail</Button>} />
-          <ul className="flex flex-col gap-3.5">
+        <section className="cell col-span-12 lg:col-span-5">
+          <CellHead title="Activity"
+            right={<Button variant="ghost" onClick={() => navigate('/audit-trail')}>Full trail</Button>} />
+          <ul className="flex flex-col">
             {events.slice(0, 5).map(e => {
               const Icon = eventIcon[e.event_type] ?? FileText
               const block = e.event_type === 'model_armor_block'
               return (
-                <li key={e.id} className="flex items-start gap-3">
-                  <span className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${block ? 'bg-high text-white' : 'bg-sunk text-ink-3'}`}>
-                    <Icon size={13} />
+                <li key={e.id} className="flex items-start gap-3 border-b border-line py-2.5 last:border-0">
+                  <span className={`mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] ${block ? 'bg-high text-white' : 'bg-quiet text-ink-3'}`}>
+                    <Icon size={12} />
                   </span>
-                  <div className="min-w-0">
-                    <p className={`line-clamp-2 text-[12.5px] leading-[1.45] ${block ? 'font-medium text-high' : 'text-ink'}`}>{e.description}</p>
-                    <p className="mt-0.5 text-[11.5px] text-ink-3">{timeShort(e.occurred_at)}</p>
-                  </div>
+                  <p className={`line-clamp-2 flex-1 text-[12.5px] leading-[1.45] ${block ? 'font-medium text-high' : 'text-ink-2'}`}>{e.description}</p>
+                  <span className="mono shrink-0 text-ink-3">{timeShort(e.occurred_at)}</span>
                 </li>
               )
             })}

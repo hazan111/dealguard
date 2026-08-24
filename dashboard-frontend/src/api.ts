@@ -97,6 +97,8 @@ export interface Summary {
   resolved: number
   documents_processed: number
   blocked_injections: number
+  by_domain?: Record<string, number>
+  timeline_events?: number
 }
 
 export interface TimelineEvent {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Ban, FileText, Link2, Mic, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, fetchAudio, type DocumentRecord, type Finding, type Summary, type TimelineEvent } from '../api'
 import { Button, CellHead, DomainTag, SeverityTag, timeShort } from '../components/ui'
-import { Constellation, DataRoom, DomainDonut, EvidenceBars, ExposureArc } from '../components/visuals'
+import { Constellation, DataRoom, DomainDonut, EvidenceBars, ExposurePanel } from '../components/visuals'
 
 interface Briefing { id: string; briefing_date: string; script_text: string }
 
@@ -95,14 +95,12 @@ export default function Dashboard() {
 
       <div className="grid-shell rise grid grid-cols-12" style={{ animationDelay: '60ms' }}>
         <section className="cell col-span-12 flex flex-col lg:col-span-4">
-          <CellHead title="Exposure" hint="Everything still open, split by severity" />
-          <div className="flex flex-1 items-center justify-center">
-            <ExposureArc findings={findings} />
-          </div>
+          <CellHead title="Exposure" hint="What is still open, how severe, and the treatment each finding asks for" />
+          <ExposurePanel findings={findings} />
         </section>
 
         <section className="cell col-span-12 flex flex-col md:col-span-6 lg:col-span-4">
-          <CellHead title="Where it sits" hint="Which specialist raised it" />
+          <CellHead title="Where it sits" hint="Which of the four specialists raised it" />
           <div className="flex flex-1 items-center">
             <DomainDonut findings={findings} />
           </div>

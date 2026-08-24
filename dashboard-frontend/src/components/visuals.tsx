@@ -18,9 +18,18 @@ function arcPath(cx: number, cy: number, r: number, a0: number, a1: number): str
   return `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 ${Math.abs(a1 - a0) > 180 ? 1 : 0} 1 ${p1[0]} ${p1[1]}`
 }
 
-/* -------- Exposure: open risk severity mix -------- */
+/* -------- Exposure: how many are open, how severe, and what they ask you to do.
+   Deliberately not a circle: the donut below already carries the only ring on the page. -------- */
 
-export function ExposureArc({ findings }: { findings: Finding[] }) {
+const ACTION_NOTE: Record<string, string> = {
+  're-trade': 'reopen price',
+  escrow: 'hold back funds',
+  indemnity: 'seller covers it',
+  'walk-away': 'deal breaker',
+  monitor: 'watch, no action',
+}
+
+export function ExposurePanel({ findings }: { findings: Finding[] }) {
   const open = findings.filter(f => f.status !== 'resolved')
   const counts = {
     high: open.filter(f => f.severity === 'high').length,
@@ -29,36 +38,35 @@ export function ExposureArc({ findings }: { findings: Finding[] }) {
   }
   const total = open.length
   const state = counts.high >= 3 ? 'Elevated' : counts.high > 0 ? 'Attention' : counts.medium > 0 ? 'Watch' : 'Clear'
-  const tone = counts.high > 0 ? 'bg-high-soft text-high' : counts.medium > 0 ? 'bg-med-soft text-med' : 'bg-ok-soft text-ok'
-
-  const cx = 130, cy = 130, r = 106, sw = 18, gap = 4
+  const tone = counts.high > 0 ? 'bg-high-soft text-high' : 'bg-quiet text-ink-2'
   const order: (keyof typeof counts)[] = ['high', 'medium', 'low']
-  const segs: { a0: number; a1: number; c: string }[] = []
-  let cursor = 180
-  for (const k of order) {
-    if (!counts[k] || !total) continue
-    const span = (counts[k] / total) * 180
-    segs.push({ a0: cursor + gap / 2, a1: cursor + span - gap / 2, c: sevColor[k] })
-    cursor += span
+
+  const actions = new Map<string, number>()
+  for (const f of open) {
+    const a = f.recommended_action || 'monitor'
+    actions.set(a, (actions.get(a) ?? 0) + 1)
   }
+  const ranked = [...actions.entries()].sort((a, b) => b[1] - a[1])
+  const max = Math.max(1, ...ranked.map(([, n]) => n))
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <svg viewBox="0 0 260 142" className="w-full max-w-[260px]" role="img"
-          aria-label={`${total} open risks, ${counts.high} high severity`}>
-          <path d={arcPath(cx, cy, r, 180, 360)} stroke="var(--color-quiet)" strokeWidth={sw} strokeLinecap="round" fill="none" />
-          {segs.map((s, i) => (
-            <path key={i} d={arcPath(cx, cy, r, s.a0, s.a1)} stroke={s.c} strokeWidth={sw} strokeLinecap="round" fill="none" />
-          ))}
-        </svg>
-        <div className="absolute inset-x-0 bottom-1 flex flex-col items-center">
-          <span className="tight text-[54px] font-black leading-[0.9]">{total}</span>
-          <span className="label mt-2">open risks</span>
-          <span className={`tag mt-2.5 ${tone}`}>{state}</span>
+    <div className="flex flex-col">
+      <div className="flex items-end gap-4">
+        <span className="tight text-[64px] font-black leading-[0.82]">{total}</span>
+        <div className="pb-1.5">
+          <p className="label">open risks</p>
+          <span className={`tag mt-2 ${tone}`}>{state}</span>
         </div>
       </div>
-      <div className="mt-6 flex w-full items-center justify-between border-t border-line pt-4">
+
+      <div className="mt-6 flex h-2 gap-1 overflow-hidden">
+        {total === 0
+          ? <span className="flex-1 rounded-full bg-quiet" />
+          : order.filter(k => counts[k] > 0).map(k => (
+            <span key={k} className="rounded-full" style={{ flex: counts[k], background: sevColor[k] }} />
+          ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between">
         {order.map(k => (
           <div key={k} className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ background: sevColor[k] }} />
@@ -66,6 +74,21 @@ export function ExposureArc({ findings }: { findings: Finding[] }) {
           </div>
         ))}
       </div>
+
+      <p className="label mt-7">What they ask you to do</p>
+      <ul className="mt-3">
+        {ranked.map(([action, n]) => (
+          <li key={action} className="flex items-center gap-3 border-b border-line py-2.5 last:border-0">
+            <span className="w-[92px] shrink-0 text-[13px] capitalize">{action}</span>
+            <span className="hidden text-[11.5px] text-ink-3 sm:block">{ACTION_NOTE[action] ?? ''}</span>
+            <span className="ml-auto flex items-center gap-2.5">
+              <span className="h-1.5 rounded-full bg-ink" style={{ width: `${(n / max) * 46 + 8}px` }} />
+              <b className="w-3 text-right text-[13px] font-bold">{n}</b>
+            </span>
+          </li>
+        ))}
+        {ranked.length === 0 && <li className="py-3 text-[13px] text-ink-3">Nothing open.</li>}
+      </ul>
     </div>
   )
 }

@@ -40,8 +40,8 @@ Headings `-0.03em` tracking, body `-0.011em`, labels 11px uppercase `0.08em`. Bi
 
 ## The five data components
 
-1. **Exposure arc** — half circle, 18px stroke, split by severity share; count and status inside.
-2. **Department donut** — 15px stroke, ink-ramp segments, total in the middle.
+1. **Exposure panel** — the open count in 64px type, a slim stacked severity bar, then the treatment mix each finding asks for (escrow, monitor, indemnity, re-trade, walk-away). Deliberately *not* a ring: a severity donut next to a department donut said the same number twice.
+2. **Department donut** — 15px stroke, ink-ramp segments, total in the middle. The only ring on the page.
 3. **Evidence bars** — one segment per finding; ink when the quote was found verbatim in the source, red when it was not.
 4. **Data room** — a bordered tile per document; the Model Armor block is the only red tile.
 5. **Constellation** — shared entity in the centre (red when the cluster carries a high finding), member findings ringed around it, hairline spokes.
@@ -52,4 +52,4 @@ Headings `-0.03em` tracking, body `-0.011em`, labels 11px uppercase `0.08em`. Bi
 
 ## Bans
 
-A second saturated hue anywhere in data, soft shadows as structure, serif display type, metric-card rows, side-stripe borders, gradient text, emoji, charts that show no real data.
+Two charts that answer the same question, a second saturated hue anywhere in data, soft shadows as structure, serif display type, metric-card rows, side-stripe borders, gradient text, emoji, charts that show no real data.

@@ -120,7 +120,7 @@ export default function RiskRegister() {
               <th className="w-[92px]">Severity</th>
               <th className="w-[88px]">Domain</th>
               <th>Finding</th>
-              <th className="w-[168px]">Source</th>
+              {!selected && <th className="w-[200px]">Source</th>}
               <th className="w-[56px] text-right">Links</th>
               <th className="w-[112px]">Status</th>
             </tr>
@@ -134,7 +134,7 @@ export default function RiskRegister() {
                   <div className="truncate">{f.summary}</div>
                   <div className="t-meta truncate">{f.red_flag_pattern}</div>
                 </td>
-                <td className="t-mono truncate text-ink-2">{f.document_name}</td>
+                {!selected && <td className="t-mono truncate text-ink-2">{f.document_name}</td>}
                 <td className="text-right">
                   {f.cross_referenced_finding_ids.length > 0 && (
                     <span className="inline-flex items-center gap-1 text-[12px] text-accent"><Link2 size={12} />{f.cross_referenced_finding_ids.length}</span>
@@ -144,7 +144,7 @@ export default function RiskRegister() {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="h-20 text-center text-ink-2">No findings match these filters.</td></tr>
+              <tr><td colSpan={selected ? 5 : 6} className="h-20 text-center text-ink-2">No findings match these filters.</td></tr>
             )}
           </tbody>
         </table>

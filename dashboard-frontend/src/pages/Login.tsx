@@ -18,39 +18,30 @@ export default function Login() {
       await login(username, password)
       navigate('/')
     } catch {
-      setError('Invalid credentials')
+      setError('That username and password did not match.')
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-sidebar">
-      <form onSubmit={submit} className="w-80 rounded-lg bg-white p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-panel">
+      <form onSubmit={submit} className="w-[340px] rounded-lg border border-line bg-raised p-7">
         <div className="mb-6 flex items-center gap-2">
-          <Shield size={24} className="text-accent" />
-          <span className="text-lg font-semibold">DealGuard</span>
+          <Shield size={18} strokeWidth={2.2} className="text-accent" />
+          <span className="text-[15px] font-semibold tracking-tight">DealGuard</span>
         </div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-ink-secondary">Username</label>
-        <input
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          className="mb-4 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-accent"
-          autoFocus
-        />
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-ink-secondary">Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          className="mb-4 w-full rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-accent"
-        />
-        {error && <p className="mb-3 text-sm text-open">{error}</p>}
-        <button
-          disabled={busy}
-          className="w-full rounded-md bg-accent py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
-        >
-          {busy ? 'Signing in…' : 'Sign in'}
+        <p className="mb-5 text-[13px] text-ink-2">Sign in to the Project Kestrel deal file.</p>
+
+        <label className="t-label mb-1.5 block">Username</label>
+        <input value={username} onChange={e => setUsername(e.target.value)} className="input mb-4 w-full" autoFocus />
+
+        <label className="t-label mb-1.5 block">Password</label>
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="input mb-5 w-full" />
+
+        {error && <p className="mb-3 text-[13px] text-sev-high">{error}</p>}
+        <button type="submit" disabled={busy} className="btn btn-primary w-full justify-center">
+          {busy ? 'Signing in' : 'Sign in'}
         </button>
       </form>
     </div>

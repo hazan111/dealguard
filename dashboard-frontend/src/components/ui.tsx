@@ -1,71 +1,72 @@
 import type { ReactNode } from 'react'
 
-export function StatusBadge({ status }: { status: string }) {
+export function SeverityPill({ severity }: { severity: string }) {
   const styles: Record<string, string> = {
-    open: 'bg-open/10 text-open border-open/30',
-    needs_review: 'bg-review/15 text-ink-secondary border-review/40',
-    under_review: 'bg-review/15 text-ink-secondary border-review/40',
-    resolved: 'bg-resolved/10 text-resolved border-resolved/30',
+    high: 'bg-sev-high-soft text-sev-high',
+    medium: 'bg-sev-med-soft text-sev-med',
+    low: 'bg-sev-low-soft text-sev-low',
   }
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${styles[status] ?? styles.needs_review}`}>
-      {status.replace('_', ' ')}
-    </span>
-  )
-}
-
-export function SeverityBadge({ severity }: { severity: string }) {
-  const styles: Record<string, string> = {
-    high: 'bg-open text-white',
-    medium: 'bg-accent text-white',
-    low: 'bg-review text-white',
-  }
-  return (
-    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${styles[severity] ?? styles.low}`}>
+    <span className={`pill ${styles[severity] ?? styles.low}`}>
+      <span className="dot" />
       {severity}
     </span>
   )
 }
 
-export function DomainBadge({ domain }: { domain: string }) {
-  const labels: Record<string, string> = { legal: 'Legal', financial: 'Financial', hr: 'HR/Comp', ip: 'IP' }
+export function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { cls: string; label: string }> = {
+    open: { cls: 'border border-line-strong bg-raised text-ink', label: 'Open' },
+    needs_review: { cls: 'bg-warn-soft text-warn', label: 'Needs review' },
+    under_review: { cls: 'bg-warn-soft text-warn', label: 'Under review' },
+    resolved: { cls: 'bg-ok-soft text-ok', label: 'Resolved' },
+  }
+  const s = map[status] ?? map.open
+  return <span className={`pill ${s.cls}`}>{s.label}</span>
+}
+
+const domainLabels: Record<string, string> = { legal: 'Legal', financial: 'Financial', hr: 'HR / Comp', ip: 'IP' }
+
+export function Domain({ domain }: { domain: string }) {
+  return <span className="text-[12px] font-medium text-ink-2">{domainLabels[domain] ?? domain}</span>
+}
+
+export function Button({ children, onClick, variant = 'primary', disabled, type = 'button' }: {
+  children: ReactNode; onClick?: () => void
+  variant?: 'primary' | 'secondary' | 'ok' | 'ghost'; disabled?: boolean
+  type?: 'button' | 'submit'
+}) {
   return (
-    <span className="inline-flex items-center rounded border border-line bg-surface px-2 py-0.5 text-xs font-medium text-ink">
-      {labels[domain] ?? domain}
-    </span>
+    <button type={type} onClick={onClick} disabled={disabled} className={`btn btn-${variant}`}>
+      {children}
+    </button>
   )
 }
 
-export function SummaryTile({ label, value, icon, alert }: {
-  label: string; value: number | string; icon: ReactNode; alert?: boolean
-}) {
+export function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
-    <div className="rounded-lg border border-line bg-white p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wider text-ink-secondary">{label}</span>
-        <span className={alert ? 'text-open' : 'text-ink-secondary'}>{icon}</span>
-      </div>
-      <div className={`mt-2 text-3xl font-semibold ${alert ? 'text-open' : 'text-ink'}`}>{value}</div>
+    <div className="mb-2 flex h-6 items-center justify-between">
+      <span className="t-label">{children}</span>
+      {right}
     </div>
   )
 }
 
-export function Button({ children, onClick, variant = 'primary', disabled }: {
-  children: ReactNode; onClick?: () => void
-  variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean
-}) {
-  const styles = {
-    primary: 'bg-accent hover:bg-accent-hover text-white',
-    secondary: 'border border-line bg-white hover:bg-surface text-ink',
-    danger: 'bg-resolved hover:brightness-95 text-white',
-  }
+export function Stat({ label, value, tone }: { label: string; value: number | string; tone?: 'high' | 'warn' }) {
+  const color = tone === 'high' ? 'text-sev-high' : tone === 'warn' ? 'text-warn' : 'text-ink'
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]}`}
-    >
-      {children}
-    </button>
+    <div className="flex flex-col gap-0.5 pr-8">
+      <span className="t-label">{label}</span>
+      <span className={`text-[20px] font-semibold leading-7 ${color}`}>{value}</span>
+    </div>
   )
+}
+
+export function timeShort(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+export function dateLong(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }

@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Ban, FileText, Mic, ShieldAlert, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Ban, FileText, Mic, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, type TimelineEvent } from '../api'
+import { dateLong, timeShort } from '../components/ui'
 
-const eventMeta: Record<string, { icon: typeof FileText; color: string }> = {
-  document_ingested: { icon: FileText, color: 'text-ink-secondary' },
-  finding_created: { icon: ShieldAlert, color: 'text-accent' },
-  finding_updated: { icon: RefreshCw, color: 'text-accent' },
-  model_armor_block: { icon: Ban, color: 'text-open' },
-  voice_briefing_generated: { icon: Mic, color: 'text-resolved' },
+const meta: Record<string, { icon: typeof FileText; label: string }> = {
+  document_ingested: { icon: FileText, label: 'Document' },
+  finding_created: { icon: ShieldAlert, label: 'Finding' },
+  finding_updated: { icon: RefreshCw, label: 'Update' },
+  model_armor_block: { icon: Ban, label: 'Blocked' },
+  voice_briefing_generated: { icon: Mic, label: 'Briefing' },
 }
 
 export default function AuditTrail() {
@@ -24,34 +25,45 @@ export default function AuditTrail() {
     return () => clearInterval(timer)
   }, [refresh])
 
+  const groups = useMemo(() => {
+    const map = new Map<string, TimelineEvent[]>()
+    for (const e of events) {
+      const day = dateLong(e.occurred_at)
+      map.set(day, [...(map.get(day) ?? []), e])
+    }
+    return [...map.entries()]
+  }, [events])
+
+  const blocked = events.filter(e => e.event_type === 'model_armor_block').length
+
   return (
-    <div>
-      <h1 className="mb-6 text-xl font-semibold">Audit Trail</h1>
-      <div className="rounded-lg border border-line bg-white">
-        <ul className="divide-y divide-line">
-          {events.map(e => {
-            const meta = eventMeta[e.event_type] ?? eventMeta.document_ingested
-            const Icon = meta.icon
-            const isBlock = e.event_type === 'model_armor_block'
-            return (
-              <li key={e.id} className={`flex items-start gap-3 px-5 py-3.5 ${isBlock ? 'bg-open/5' : ''}`}>
-                <Icon size={16} className={`mt-0.5 shrink-0 ${meta.color}`} />
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm leading-relaxed ${isBlock ? 'font-medium text-open' : 'text-ink'}`}>
-                    {e.description}
-                  </p>
-                  <p className="mt-0.5 text-xs text-ink-secondary">
-                    {new Date(e.occurred_at).toLocaleString('en-US')} · {e.event_type.replace(/_/g, ' ')}
-                  </p>
-                </div>
-              </li>
-            )
-          })}
-          {events.length === 0 && (
-            <li className="px-5 py-10 text-center text-sm text-ink-secondary">No events yet.</li>
-          )}
-        </ul>
-      </div>
+    <div className="mx-auto max-w-[960px] px-8 py-7">
+      <header className="mb-6">
+        <h1 className="text-[20px] font-semibold tracking-tight">Audit trail</h1>
+        <p className="t-meta mt-0.5">{events.length} events · {blocked} blocked by Model Armor · every agent action, in order</p>
+      </header>
+
+      {groups.map(([day, list]) => (
+        <section key={day} className="mb-8">
+          <div className="t-label mb-2">{day}</div>
+          <ul className="divide-y divide-line border-y border-line">
+            {list.map(e => {
+              const m = meta[e.event_type] ?? meta.document_ingested
+              const Icon = m.icon
+              const block = e.event_type === 'model_armor_block'
+              return (
+                <li key={e.id} className={`grid grid-cols-[52px_20px_84px_1fr] items-start gap-3 py-2.5 ${block ? 'bg-sev-high-soft/60' : ''}`}>
+                  <span className="t-mono pt-0.5 text-ink-3">{timeShort(e.occurred_at)}</span>
+                  <Icon size={14} className={`mt-0.5 ${block ? 'text-sev-high' : 'text-ink-3'}`} />
+                  <span className={`pt-px text-[12px] font-medium ${block ? 'text-sev-high' : 'text-ink-2'}`}>{m.label}</span>
+                  <span className={`text-[13px] leading-5 ${block ? 'font-medium text-sev-high' : 'text-ink'}`}>{e.description}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
+      {events.length === 0 && <p className="t-meta">Nothing recorded yet.</p>}
     </div>
   )
 }

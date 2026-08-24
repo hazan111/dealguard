@@ -1,54 +1,63 @@
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ShieldAlert, ScrollText, LogOut, Shield } from 'lucide-react'
+import { LayoutList, ShieldAlert, ScrollText, LogOut, Shield } from 'lucide-react'
 import { setToken } from '../api'
 
 const nav = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/risk-register', label: 'Risk Register', icon: ShieldAlert },
-  { to: '/audit-trail', label: 'Audit Trail', icon: ScrollText },
+  { to: '/', label: 'Overview', icon: LayoutList },
+  { to: '/risk-register', label: 'Risk register', icon: ShieldAlert },
+  { to: '/audit-trail', label: 'Audit trail', icon: ScrollText },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-56 shrink-0 flex-col bg-sidebar text-sidebar-text">
-        <div className="flex items-center gap-2 px-5 py-5">
-          <Shield size={22} className="text-accent" />
-          <span className="text-base font-semibold text-white">DealGuard</span>
+      <aside className="sticky top-0 flex h-screen w-[220px] shrink-0 flex-col border-r border-line bg-panel">
+        <div className="flex items-center gap-2 px-4 pt-5 pb-4">
+          <Shield size={18} strokeWidth={2.2} className="text-accent" />
+          <span className="text-[15px] font-semibold tracking-tight">DealGuard</span>
         </div>
-        <div className="px-5 pb-4 text-xs text-sidebar-text/70">
-          Project Kestrel · Solvane Search Partners
+
+        <div className="mx-4 mb-4 rounded-md border border-line bg-raised px-3 py-2.5">
+          <div className="t-label">Deal</div>
+          <div className="mt-0.5 text-[13px] font-medium leading-5">Project Kestrel</div>
+          <div className="t-meta leading-4">Solvane Search Partners → Kestrel Robotics</div>
         </div>
-        <nav className="flex-1 space-y-1 px-3">
+
+        <nav className="flex flex-col gap-0.5 px-2">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
+                `flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] transition-colors duration-150 ${
+                  isActive ? 'bg-accent-soft font-medium text-accent' : 'text-ink-2 hover:bg-raised hover:text-ink'
                 }`
               }
             >
-              <Icon size={16} />
+              <Icon size={15} strokeWidth={2} />
               {label}
             </NavLink>
           ))}
         </nav>
-        <button
-          onClick={() => { setToken(null); navigate('/login') }}
-          className="mx-3 mb-4 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium hover:bg-white/5 hover:text-white"
-        >
-          <LogOut size={16} />
-          Sign out
-        </button>
+
+        <div className="mt-auto px-2 pb-3">
+          <div className="mx-2.5 mb-2 border-t border-line pt-3">
+            <div className="text-[13px] font-medium">Maya Chen</div>
+            <div className="t-meta">Searcher · reviewer of record</div>
+          </div>
+          <button
+            onClick={() => { setToken(null); navigate('/login') }}
+            className="btn btn-ghost h-8 w-full justify-start px-2.5"
+          >
+            <LogOut size={15} />
+            Sign out
+          </button>
+        </div>
       </aside>
-      <main className="flex-1 bg-surface">
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
-      </main>
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   )
 }

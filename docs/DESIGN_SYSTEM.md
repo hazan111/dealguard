@@ -1,5 +1,7 @@
 # DealGuard — Design System
 
+> **Superseded 2026-08-24.** The Cloudflare-inspired direction below (dark sidebar, orange accent, metric tiles) was retired after review; the shipped dashboard follows the Linear/Stripe-grade product direction documented in the repo-root `DESIGN.md` (single light surface, paper-toned OKLCH neutrals, ink-blue accent, Instrument Sans + JetBrains Mono, table-first density, side panel instead of modal). Kept for history.
+
 Cloudflare-dashboard-inspired. Applies to the web dashboard only.
 
 ## Layout

@@ -1,70 +1,53 @@
 # Design
 
-Direction (2026-08-24): Linear/Stripe-grade product UI. Single light surface with a slightly warmer, paper-toned sidebar panel. One ink accent, full semantic palette for severity and status. Table-first density. This supersedes the earlier Cloudflare-inspired direction in `docs/DESIGN_SYSTEM.md`.
+Direction v3 (2026-08-24), from reference boards the owner selected: soft tinted ground, floating rounded cards, an icon rail, and **charts carrying the page**. v1 (Cloudflare chrome) and v2 (dense hairline tables) are retired. Every chart here is drawn from real deal data; nothing decorative.
 
-## Color
+## Ground and surfaces
 
-Scene: evening, laptop, quiet office, a person reading a deal file. Light theme; no dark toggle.
-
-All values OKLCH; neutrals tinted toward the paper hue (h 75, chroma 0.006) so nothing is a raw gray.
+Warm oat paper, never white-on-white. Cards float on it with a soft double shadow, radius 24px.
 
 | Token | Value | Use |
 |---|---|---|
-| `--bg` | oklch(0.985 0.004 75) | page ground |
-| `--panel` | oklch(0.965 0.006 75) | sidebar, table header, side panel |
-| `--raised` | oklch(0.995 0.002 75) | rows on hover, inputs |
-| `--line` | oklch(0.90 0.008 75) | hairlines |
-| `--line-strong` | oklch(0.82 0.01 75) | table header rule, focus ring base |
-| `--ink` | oklch(0.22 0.012 265) | primary text |
-| `--ink-2` | oklch(0.48 0.016 265) | secondary text, labels |
-| `--ink-3` | oklch(0.64 0.014 265) | tertiary, placeholders |
-| `--accent` | oklch(0.40 0.09 265) | primary buttons, links, selection, active nav |
-| `--accent-soft` | oklch(0.94 0.02 265) | selected row, active nav ground |
-| `--sev-high` | oklch(0.55 0.19 27) | severity high |
-| `--sev-high-soft` | oklch(0.95 0.03 27) | high pill ground |
-| `--sev-med` | oklch(0.62 0.15 65) | severity medium |
-| `--sev-med-soft` | oklch(0.96 0.035 80) | medium pill ground |
-| `--sev-low` | oklch(0.60 0.02 265) | severity low |
-| `--ok` | oklch(0.58 0.14 150) | resolved, verified |
-| `--ok-soft` | oklch(0.95 0.03 150) | resolved pill ground |
-| `--warn` | oklch(0.66 0.14 75) | needs review |
+| `--color-ground` | oklch(0.962 0.012 85) | page |
+| `--color-card` | oklch(0.995 0.003 85) | floating cards, rail |
+| `--color-sunk` | oklch(0.975 0.008 85) | inset blocks, tiles, soft buttons |
+| `--color-hair` | oklch(0.92 0.010 85) | dividers, chart tracks |
+| `--shadow-card` | 0 1px 2px / 0 14px 34px -18px, warm-tinted | every card |
 
-Strategy: Restrained for chrome (accent under 10% of the surface), Full palette only inside data (severity, status, verification).
+## Color
+
+Restrained chrome, full palette inside data.
+
+- Ink: `oklch(0.26 0.018 275)` / secondary `0.50` / tertiary `0.66` — all tinted toward the accent hue.
+- Accent (rail active, primary buttons, links): deep indigo `oklch(0.38 0.095 275)`, soft `oklch(0.93 0.030 275)`.
+- Severity: high `oklch(0.57 0.17 25)`, medium `oklch(0.73 0.14 70)`, low `oklch(0.66 0.03 85)`.
+- Departments (donut, constellation, chips): legal indigo 275, financial gold 75, hr moss 155, ip plum 340.
+- Verified/resolved: moss `oklch(0.58 0.12 155)`.
 
 ## Typography
 
-- UI family: Instrument Sans (Google Fonts), fallback system-ui. Weights 400 / 500 / 600.
-- Data family: JetBrains Mono, fallback ui-monospace. Used for finding ids, citations, timestamps, counts in tables. `font-variant-numeric: tabular-nums` everywhere digits align.
-- Scale (rem, ratio 1.2): 11 label · 12 meta · 13 table · 14 body · 16 section · 20 page title. Page titles 600, section headers 500 uppercase 11px with 0.08em tracking, body 400.
-- Line length for prose (briefing script, summaries): 70ch max.
+- Display: **Fraunces** (variable, opsz 96, SOFT 30) — page titles, hero numerals, entity names. Italic at opsz 14 for **document quotes and seller questions**: evidence reads as quoted material, which is the product's whole point.
+- UI: **Outfit** 300–600 — labels, body, data. `tabular-nums` globally.
+- Labels: 10.5px, uppercase, 0.12em tracking. Body 13–14px. Page titles 34–38px.
 
-## Spacing and layout
+## Layout
 
-- 4px base. Row height 36px in tables, 32px controls, 20px pills.
-- Sidebar 220px, panel-toned, 1px line on the right. Content max 1240px, 32px gutters.
-- Detail view is a right side panel (440px) that pushes content, not a modal overlay.
-- No cards for metrics. Summary is an inline stat strip separated by hairlines.
+- Floating icon rail, 78px, radius 28px, sticky full height. Icon + 9.5px label, active state = accent-soft rounded square.
+- 12-column bento at 20px gutters: exposure / donut / evidence across the top, data room full width, then connected risk + top findings, then briefing + activity.
+- Detail view is a sticky drawer card beside the list (deep-linked `?f=id`), never a modal.
 
-## Components
+## The five data components
 
-- Button: 32px, radius 6px. Primary = accent ground, white text. Secondary = raised ground, 1px line. Danger (resolve) = ok-green ground after an inline confirm step. Focus: 2px accent ring offset 2px.
-- Pill: 20px, radius 999, 11px 500, tinted ground + colored text; severity pills carry a 6px dot plus the word.
-- Table: header 11px uppercase on panel ground, rows 36px, hairline between rows, hover raised ground, selected accent-soft. Severity column first, tabular.
-- Side panel: panel ground, 24px padding, sections separated by 11px labels, citation set in mono inside a raised block.
-- Nav item: 32px, radius 6px, active = accent-soft ground + accent text + 500 weight.
+1. **Exposure arc** — half circle, 30px stroke, round caps, split by severity share; count and status word inside, legend below.
+2. **Department donut** — 22px stroke, gapped rounded segments, total in the middle.
+3. **Evidence bars** — one segment per finding per department, colored when the quote was found verbatim in the source, amber when it was not.
+4. **Data room** — a tile per document: routed department, finding count, ingest time; a Model Armor block is the only red tile.
+5. **Constellation** — the shared entity at the center, member findings orbiting in department colors, hairline curves between. This is the cross-domain story the product exists to tell.
 
 ## Motion
 
-150 to 200ms, ease-out-quart, only on hover/focus/panel open. Panel slides 12px + fades. Respect `prefers-reduced-motion`.
+Cards rise 10px with a 40ms stagger on load (520ms, ease-out-quart), drawer slides 18px. Hover/active transitions 160–200ms. Everything off under `prefers-reduced-motion`.
 
-## Bans (on top of impeccable's)
+## Bans
 
-Orange accent, dark sidebar, metric cards, emoji, illustrations, gradient text, side-stripe borders.
-
-## Supporting visuals (added 2026-08-24 after review: "too dense, no visual direction")
-
-Three components carry the visual identity; everything else stays quiet.
-- **Severity gauge**: a 12-slice half-circle (3° gaps) colored high → medium → low in proportion; the status word (Elevated / Attention / Watch / Clear) sits in the middle, the number sits outside to the right. Never a full circle, never a percentage.
-- **Data room strip**: one tile per document (mono filename, domain, finding count, ingest time); a Model Armor block is the only red tile.
-- **Risk clusters**: a small node diagram per cluster, the shared entity on top, member findings as domain-colored nodes fanned below and connected with hairline curves. Domain hues: legal ink, financial amber, hr green, ip red.
-Spacing: page padding 40px, section gap 48px, table rows 44px, overview rows two lines.
+Dark sidebar, orange accent, hairline data tables, metric-card rows, side-stripe borders, gradient text, emoji, illustrations, charts that show no real data.

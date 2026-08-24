@@ -1,96 +1,176 @@
 import { useMemo } from 'react'
-import { Ban, FileText, Link2 } from 'lucide-react'
+import { FileText, ShieldOff } from 'lucide-react'
 import type { DocumentRecord, Finding } from '../api'
-import { timeShort } from './ui'
+import { domainMeta, timeShort } from './ui'
 
-/* ---------- Severity gauge: segmented half-circle, status in the middle, number outside ---------- */
+const TAU = Math.PI * 2
+const rad = (deg: number) => (deg * Math.PI) / 180
 
-export function SeverityGauge({ findings }: { findings: Finding[] }) {
+const sevColor: Record<string, string> = {
+  high: 'var(--color-high)',
+  medium: 'var(--color-med)',
+  low: 'var(--color-low)',
+}
+
+/* Arc path along a circle, drawn as a stroked line (round caps do the rest). */
+function arcPath(cx: number, cy: number, r: number, a0: number, a1: number): string {
+  const p0 = [cx + r * Math.cos(rad(a0)), cy + r * Math.sin(rad(a0))]
+  const p1 = [cx + r * Math.cos(rad(a1)), cy + r * Math.sin(rad(a1))]
+  const large = Math.abs(a1 - a0) > 180 ? 1 : 0
+  return `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 ${large} 1 ${p1[0]} ${p1[1]}`
+}
+
+/* ---------------- Exposure arc: the hero. Severity mix of everything still open. ---------------- */
+
+export function ExposureArc({ findings }: { findings: Finding[] }) {
   const open = findings.filter(f => f.status !== 'resolved')
-  const high = open.filter(f => f.severity === 'high').length
-  const medium = open.filter(f => f.severity === 'medium').length
-  const low = open.filter(f => f.severity === 'low').length
+  const counts = {
+    high: open.filter(f => f.severity === 'high').length,
+    medium: open.filter(f => f.severity === 'medium').length,
+    low: open.filter(f => f.severity === 'low').length,
+  }
   const total = open.length
+  const state = counts.high >= 3 ? 'Elevated' : counts.high > 0 ? 'Attention' : counts.medium > 0 ? 'Watch' : 'Clear'
+  const stateColor = counts.high > 0 ? 'var(--color-high)' : counts.medium > 0 ? 'var(--color-med)' : 'var(--color-ok)'
 
-  const status = high >= 3 ? 'Elevated' : high > 0 ? 'Attention' : medium > 0 ? 'Watch' : 'Clear'
-  const statusColor = high > 0 ? 'text-sev-high' : medium > 0 ? 'text-sev-med' : 'text-ok'
-
-  // 12 slices across 180°, each slice colored by severity in order high → medium → low.
-  const slices = 12
-  const share = (n: number) => total ? Math.round((n / total) * slices) : 0
-  let hi = share(high), md = share(medium)
-  let lo = Math.max(0, slices - hi - md)
-  if (total && hi + md + lo !== slices) lo = slices - hi - md
-  const colors = [
-    ...Array(hi).fill('var(--color-sev-high)'),
-    ...Array(md).fill('var(--color-sev-med)'),
-    ...Array(lo).fill(total ? 'var(--color-sev-low)' : 'var(--color-line)'),
-  ]
-
-  const cx = 90, cy = 88, rOuter = 82, rInner = 66, gapDeg = 3
-  const step = 180 / slices
-  const arc = (start: number, end: number) => {
-    const s = ((180 + start) * Math.PI) / 180, e = ((180 + end) * Math.PI) / 180
-    const p = (r: number, a: number) => `${cx + r * Math.cos(a)} ${cy + r * Math.sin(a)}`
-    return `M ${p(rOuter, s)} A ${rOuter} ${rOuter} 0 0 1 ${p(rOuter, e)} L ${p(rInner, e)} A ${rInner} ${rInner} 0 0 0 ${p(rInner, s)} Z`
+  const cx = 150, cy = 150, r = 116, sw = 30, gap = 3.2
+  const segments: { a0: number; a1: number; color: string }[] = []
+  let cursor = 180
+  const order: (keyof typeof counts)[] = ['high', 'medium', 'low']
+  for (const key of order) {
+    if (!counts[key] || !total) continue
+    const span = (counts[key] / total) * 180
+    segments.push({ a0: cursor + gap / 2, a1: cursor + span - gap / 2, color: sevColor[key] })
+    cursor += span
   }
 
   return (
-    <div className="flex items-end gap-5">
-      <div className="relative">
-        <svg width="180" height="96" viewBox="0 0 180 96" aria-label={`${total} open risks, ${high} high`}>
-          {colors.map((c, i) => (
-            <path key={i} d={arc(i * step + gapDeg / 2, (i + 1) * step - gapDeg / 2)} fill={c} />
-          ))}
-        </svg>
-        <div className="absolute inset-x-0 bottom-0 text-center">
-          <div className={`text-[13px] font-semibold uppercase tracking-[0.08em] ${statusColor}`}>{status}</div>
-        </div>
-      </div>
-      <div className="pb-1">
-        <div className="text-[28px] font-semibold leading-8 tracking-tight">{total}</div>
-        <div className="t-label">open risks</div>
-        <div className="mt-2 flex flex-col gap-0.5 text-[12px] text-ink-2">
-          <span><b className="text-sev-high">{high}</b> high</span>
-          <span><b className="text-sev-med">{medium}</b> medium</span>
-          <span><b className="text-ink">{low}</b> low</span>
-        </div>
+    <div className="flex flex-col items-center">
+      <svg viewBox="0 0 300 172" className="w-full max-w-[300px]" role="img"
+        aria-label={`${total} open risks, ${counts.high} high severity, status ${state}`}>
+        <path d={arcPath(cx, cy, r, 180, 360)} stroke="var(--color-sunk)" strokeWidth={sw} strokeLinecap="round" fill="none" />
+        {segments.map((s, i) => (
+          <path key={i} d={arcPath(cx, cy, r, s.a0, s.a1)} stroke={s.color} strokeWidth={sw} strokeLinecap="round" fill="none" />
+        ))}
+        <text x={cx} y={cy - 34} textAnchor="middle" className="display" fill="var(--color-ink)"
+          fontSize="62" fontWeight="500">{total}</text>
+        <text x={cx} y={cy - 12} textAnchor="middle" fill="var(--color-ink-3)"
+          fontSize="10.5" fontWeight="500" letterSpacing="1.3">OPEN RISKS</text>
+        <text x={cx} y={cy + 14} textAnchor="middle" fill={stateColor} fontSize="15" fontWeight="500">{state}</text>
+      </svg>
+      <div className="-mt-1 flex items-center gap-5">
+        {order.map(key => (
+          <div key={key} className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ background: sevColor[key] }} />
+            <span className="text-[12.5px] text-ink-2"><b className="font-medium text-ink">{counts[key]}</b> {key}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-/* ---------- Data room strip: one tile per document, blocked ones in red ---------- */
+/* ---------------- Donut: which department the findings landed in ---------------- */
 
-const domainLabel: Record<string, string> = { legal: 'Legal', financial: 'Financial', hr: 'HR / Comp', ip: 'IP', unclassified: 'Unclassified' }
+export function DomainDonut({ findings }: { findings: Finding[] }) {
+  const domains = ['legal', 'financial', 'hr', 'ip']
+  const counts = domains.map(d => ({ d, n: findings.filter(f => f.domain === d).length }))
+  const total = counts.reduce((s, c) => s + c.n, 0)
 
-export function DataRoomStrip({ documents }: { documents: DocumentRecord[] }) {
+  const cx = 90, cy = 90, r = 64, sw = 22, gap = 5
+  const segs: { a0: number; a1: number; color: string }[] = []
+  let cursor = -90
+  for (const { d, n } of counts) {
+    if (!n) continue
+    const span = (n / total) * 360
+    segs.push({ a0: cursor + gap / 2, a1: cursor + span - gap / 2, color: domainMeta[d].color })
+    cursor += span
+  }
+
+  return (
+    <div className="flex items-center gap-6">
+      <svg viewBox="0 0 180 180" className="h-[168px] w-[168px] shrink-0" role="img" aria-label="Findings by domain">
+        <circle cx={cx} cy={cy} r={r} stroke="var(--color-sunk)" strokeWidth={sw} fill="none" />
+        {segs.map((s, i) => (
+          <path key={i} d={arcPath(cx, cy, r, s.a0, s.a1)} stroke={s.color} strokeWidth={sw} strokeLinecap="round" fill="none" />
+        ))}
+        <text x={cx} y={cy + 4} textAnchor="middle" className="display" fill="var(--color-ink)" fontSize="36" fontWeight="500">{total}</text>
+        <text x={cx} y={cy + 22} textAnchor="middle" fill="var(--color-ink-3)" fontSize="9.5" fontWeight="500" letterSpacing="1.2">FINDINGS</text>
+      </svg>
+      <ul className="flex min-w-0 flex-col gap-3">
+        {counts.map(({ d, n }) => (
+          <li key={d} className="flex items-center gap-2.5">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: domainMeta[d].color }} />
+            <span className="text-[13px] text-ink-2">{domainMeta[d].label}</span>
+            <span className="ml-auto text-[13px] font-medium">{n}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/* ---------------- Evidence bars: is each finding's citation verified in the source? ---------------- */
+
+export function EvidenceBars({ findings }: { findings: Finding[] }) {
+  const domains = ['legal', 'financial', 'hr', 'ip']
+  return (
+    <ul className="flex flex-col gap-4">
+      {domains.map(d => {
+        const items = findings.filter(f => f.domain === d)
+        const verified = items.filter(f => f.citation_verified).length
+        return (
+          <li key={d}>
+            <div className="mb-2 flex items-baseline justify-between">
+              <span className="text-[13px] text-ink-2">{domainMeta[d].label}</span>
+              <span className="text-[12px] text-ink-3">
+                {items.length === 0 ? 'no findings' : <><b className="font-medium text-ink">{verified}</b> of {items.length} quoted verbatim</>}
+              </span>
+            </div>
+            <div className="flex h-[7px] gap-1">
+              {items.length === 0
+                ? <span className="flex-1 rounded-full bg-sunk" />
+                : items.map(f => (
+                  <span key={f.id} className="flex-1 rounded-full"
+                    style={{ background: f.citation_verified ? domainMeta[d].color : 'var(--color-med)' }}
+                    title={f.citation_verified ? 'Quote found in source' : 'Quote not found — routed to review'} />
+                ))}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/* ---------------- Data room: one tile per document ---------------- */
+
+export function DataRoom({ documents }: { documents: DocumentRecord[] }) {
   if (documents.length === 0) {
-    return <p className="t-meta">The data room is empty. Files dropped into the Drive folder appear here as they are read.</p>
+    return <p className="text-[13px] text-ink-3">Empty. Files dropped into the Drive folder land here as the agents read them.</p>
   }
   return (
-    <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
+    <div className="flex gap-3 overflow-x-auto pb-1">
       {documents.map(d => {
         const blocked = d.model_armor_verdict === 'blocked'
+        const m = domainMeta[d.category] ?? domainMeta.unclassified
         return (
-          <div
-            key={d.id}
-            className={`flex min-h-[124px] flex-col rounded-lg border p-3.5 ${
-              blocked ? 'border-sev-high/30 bg-sev-high-soft' : 'border-line bg-raised'
-            }`}
-          >
+          <div key={d.id}
+            className={`flex min-h-[130px] w-[168px] shrink-0 flex-col justify-between rounded-[var(--radius-inner)] p-4 ${blocked ? 'bg-high-soft' : 'bg-sunk'}`}>
             <div className="flex items-start justify-between">
-              {blocked ? <Ban size={18} className="text-sev-high" /> : <FileText size={18} className="text-ink-3" />}
-              <span className="t-mono text-ink-3">{timeShort(d.ingested_at)}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full"
+                style={{ background: blocked ? 'var(--color-high)' : m.soft, color: blocked ? 'white' : m.color }}>
+                {blocked ? <ShieldOff size={15} /> : <FileText size={15} />}
+              </span>
+              <span className="text-[11px] text-ink-3">{timeShort(d.ingested_at)}</span>
             </div>
-            <div className="mt-auto">
-              <div className="t-mono truncate text-ink" title={d.name}>{d.name.replace(/\.pdf$/, '')}</div>
-              <div className="mt-1 flex items-center justify-between text-[12px]">
-                <span className="text-ink-2">{blocked ? 'Model Armor' : domainLabel[d.category] ?? d.category}</span>
-                <span className={blocked ? 'font-medium text-sev-high' : 'font-medium text-ink'}>
-                  {blocked ? 'Blocked' : `${d.finding_count} finding${d.finding_count === 1 ? '' : 's'}`}
-                </span>
-              </div>
+            <div>
+              <p className="line-clamp-2 text-[12.5px] font-medium leading-4" title={d.name}>
+                {d.name.replace(/\.pdf$/, '').replace(/_/g, ' ')}
+              </p>
+              <p className="mt-1.5 text-[12px]" style={{ color: blocked ? 'var(--color-high)' : 'var(--color-ink-3)' }}>
+                {blocked ? 'Blocked before reasoning' : `${m.label} · ${d.finding_count} finding${d.finding_count === 1 ? '' : 's'}`}
+              </p>
             </div>
           </div>
         )
@@ -99,7 +179,7 @@ export function DataRoomStrip({ documents }: { documents: DocumentRecord[] }) {
   )
 }
 
-/* ---------- Risk clusters: findings connected across domains through a shared entity ---------- */
+/* ---------------- Constellation: findings that share an entity, across departments ---------------- */
 
 interface Cluster { label: string; members: Finding[] }
 
@@ -112,16 +192,15 @@ function buildClusters(findings: Finding[]): Cluster[] {
     parent.set(x, r)
     return r
   }
-  const union = (a: string, b: string) => { parent.set(find(a), find(b)) }
   const ids = new Set(findings.map(f => f.id))
-  for (const f of findings) for (const o of f.cross_referenced_finding_ids) if (ids.has(o)) union(f.id, o)
+  for (const f of findings)
+    for (const o of f.cross_referenced_finding_ids)
+      if (ids.has(o)) parent.set(find(f.id), find(o))
 
   const groups = new Map<string, Finding[]>()
-  for (const f of findings) {
-    const r = find(f.id)
-    groups.set(r, [...(groups.get(r) ?? []), f])
-  }
-  const clusters: Cluster[] = []
+  for (const f of findings) groups.set(find(f.id), [...(groups.get(find(f.id)) ?? []), f])
+
+  const out: Cluster[] = []
   for (const members of groups.values()) {
     if (members.length < 2) continue
     const tally = new Map<string, number>()
@@ -129,54 +208,61 @@ function buildClusters(findings: Finding[]): Cluster[] {
     const label = [...tally.entries()]
       .filter(([e]) => !/kestrel robotics/i.test(e))
       .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Linked findings'
-    clusters.push({ label, members })
+    out.push({ label: label.replace(/,? (Inc|Corp|LLC)\.?$/i, ''), members })
   }
-  return clusters.sort((a, b) => b.members.length - a.members.length)
+  return out.sort((a, b) => b.members.length - a.members.length)
 }
 
-const domainColor: Record<string, string> = {
-  legal: 'var(--color-accent)',
-  financial: 'var(--color-sev-med)',
-  hr: 'var(--color-ok)',
-  ip: 'var(--color-sev-high)',
-}
-
-export function RiskClusters({ findings, onSelect }: { findings: Finding[]; onSelect: (id: string) => void }) {
+export function Constellation({ findings, onSelect }: { findings: Finding[]; onSelect: (id: string) => void }) {
   const clusters = useMemo(() => buildClusters(findings), [findings])
   if (clusters.length === 0) {
-    return <p className="t-meta">No cross-domain links yet. They appear when two documents point at the same customer, person, or asset.</p>
+    return <p className="text-[13px] text-ink-3">Nothing linked yet. A link appears when two documents from different departments name the same customer, person or asset.</p>
   }
+
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {clusters.slice(0, 4).map(c => {
-        const domains = [...new Set(c.members.map(m => m.domain))]
-        const worst = c.members.some(m => m.severity === 'high') ? 'high' : c.members.some(m => m.severity === 'medium') ? 'medium' : 'low'
+    <div className="flex flex-col gap-8 lg:flex-row lg:gap-6">
+      {clusters.slice(0, 2).map(c => {
         const n = c.members.length
-        const w = 320, h = 78, cx = w / 2, cy = 18, rowY = 62
-        const xs = c.members.map((_, i) => (n === 1 ? cx : 24 + (i * (w - 48)) / (n - 1)))
+        const size = 208, cx = size / 2, cy = size / 2, ring = 74
+        const worst = c.members.some(m => m.severity === 'high') ? 'high'
+          : c.members.some(m => m.severity === 'medium') ? 'medium' : 'low'
+        const pts = c.members.map((_, i) => {
+          const a = -TAU / 4 + (i * TAU) / n
+          return [cx + ring * Math.cos(a), cy + ring * Math.sin(a)]
+        })
         return (
-          <div key={c.label} className="rounded-lg border border-line bg-raised p-4">
-            <div className="flex items-baseline justify-between">
-              <div className="text-[14px] font-semibold tracking-tight">{c.label}</div>
-              <div className="t-meta inline-flex items-center gap-1"><Link2 size={12} /> {n} findings · {domains.length} domains</div>
-            </div>
-            <svg width="100%" viewBox={`0 0 ${w} ${h}`} className="mt-2 block" aria-hidden="true">
-              {xs.map((x, i) => (
-                <path key={i} d={`M ${cx} ${cy + 9} C ${cx} ${rowY - 26}, ${x} ${cy + 20}, ${x} ${rowY - 8}`}
-                  fill="none" stroke="var(--color-line-strong)" strokeWidth="1.25" />
+          <div key={c.label} className="flex min-w-0 flex-1 items-center gap-5">
+            <svg viewBox={`0 0 ${size} ${size}`} className="h-[172px] w-[172px] shrink-0" role="img"
+              aria-label={`${c.label}: ${n} findings linked`}>
+              {pts.map(([x, y], i) => (
+                <path key={i} d={`M ${cx} ${cy} Q ${(cx + x) / 2 + (y - cy) * 0.16} ${(cy + y) / 2 - (x - cx) * 0.16} ${x} ${y}`}
+                  stroke="var(--color-hair)" strokeWidth="1.5" fill="none" />
               ))}
-              <circle cx={cx} cy={cy} r="9" fill={worst === 'high' ? 'var(--color-sev-high)' : worst === 'medium' ? 'var(--color-sev-med)' : 'var(--color-sev-low)'} />
-              <circle cx={cx} cy={cy} r="4" fill="var(--color-raised)" />
+              <circle cx={cx} cy={cy} r="30" fill={sevColor[worst]} opacity="0.09" />
+              <circle cx={cx} cy={cy} r="19" fill={sevColor[worst]} />
+              <circle cx={cx} cy={cy} r="7" fill="var(--color-card)" />
               {c.members.map((m, i) => (
-                <g key={m.id} onClick={() => onSelect(m.id)} className="cursor-pointer">
-                  <circle cx={xs[i]} cy={rowY - 8} r="6" fill={domainColor[m.domain] ?? 'var(--color-ink-3)'} />
-                  <text x={xs[i]} y={rowY + 8} textAnchor="middle" fontSize="9.5" fontWeight="500" fill="var(--color-ink-2)"
-                    style={{ letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                    {m.domain}
-                  </text>
+                <g key={m.id} onClick={() => onSelect(m.id)} style={{ cursor: 'pointer' }}>
+                  <circle cx={pts[i][0]} cy={pts[i][1]} r="20" fill={domainMeta[m.domain].soft} />
+                  <circle cx={pts[i][0]} cy={pts[i][1]} r="8" fill={domainMeta[m.domain].color} />
+                  <title>{m.summary}</title>
                 </g>
               ))}
             </svg>
+            <div className="min-w-0">
+              <p className="display text-[19px] leading-[1.2]">{c.label}</p>
+              <p className="mt-1 whitespace-nowrap text-[12.5px] text-ink-3">
+                {n} findings · {new Set(c.members.map(m => m.domain)).size} departments
+              </p>
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {[...new Set(c.members.map(m => m.domain))].map(d => (
+                  <li key={d} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ background: domainMeta[d].color }} />
+                    <span className="text-[12.5px] text-ink-2">{domainMeta[d].label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )
       })}

@@ -19,7 +19,8 @@ Precise, unhurried, evidentiary. Three words: counsel-grade, quiet, dense. The i
 ## Anti-references
 
 - The "hero-metric" SaaS dashboard: rows of identical white cards with a big number, a small label and an icon.
-- Cloudflare/GCP-console chrome: graphite sidebar against a white content area with an orange accent (the original spec direction, retired 2026-08-24).
+- Cloudflare/GCP-console chrome: graphite sidebar, white content, orange accent (spec direction, retired 2026-08-24).
+- Dense hairline-table admin UI (the interim direction, retired the same day: correct information, no visual voice).
 - Generic AI-tool look: pure white and pure black, untinted grays, Inter everywhere at one size, gradient accents, emoji, illustrations.
 - Anything that reads as "startup analytics": sparklines for their own sake, donut charts, green-up/red-down arrows.
 

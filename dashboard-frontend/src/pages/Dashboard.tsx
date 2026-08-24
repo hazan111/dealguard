@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Ban, FileText, Link2, Mic, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
+import { ArrowUpRight, Ban, FileText, Link2, Mic, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, fetchAudio, type DocumentRecord, type Finding, type Summary, type TimelineEvent } from '../api'
-import { Button, Domain, SectionLabel, SeverityPill, Stat, timeShort } from '../components/ui'
-import { DataRoomStrip, RiskClusters, SeverityGauge } from '../components/visuals'
+import { Button, CardHead, DomainChip, timeShort } from '../components/ui'
+import { Constellation, DataRoom, DomainDonut, EvidenceBars, ExposureArc } from '../components/visuals'
 
 interface Briefing { id: string; briefing_date: string; script_text: string }
 
@@ -38,11 +38,7 @@ export default function Dashboard() {
       api<{ events: TimelineEvent[] }>('/api/timeline'),
       api<{ briefing: Briefing | null }>('/api/briefings/latest'),
     ])
-    setSummary(s)
-    setFindings(f.findings)
-    setDocuments(d.documents)
-    setEvents(t.events)
-    setBriefing(b.briefing)
+    setSummary(s); setFindings(f.findings); setDocuments(d.documents); setEvents(t.events); setBriefing(b.briefing)
   }, [])
 
   useEffect(() => {
@@ -57,9 +53,7 @@ export default function Dashboard() {
       await api('/api/briefings/generate', { method: 'POST' })
       setAudioUrl(null)
       await refresh()
-    } finally {
-      setGenerating(false)
-    }
+    } finally { setGenerating(false) }
   }
 
   async function togglePlay() {
@@ -74,135 +68,157 @@ export default function Dashboard() {
     setPlaying(true)
   }
 
-  const open = findings
-    .filter(f => f.status !== 'resolved')
-    .sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
-  const lastEvent = events[0]
+  const open = findings.filter(f => f.status !== 'resolved').sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
   const openFinding = (id: string) => navigate(`/risk-register?f=${id}`)
+  const links = findings.reduce((n, f) => n + f.cross_referenced_finding_ids.length, 0) / 2 | 0
 
   return (
-    <div className="mx-auto max-w-[1180px] px-10 py-10">
-      <header className="mb-10 flex items-end justify-between gap-10">
+    <div className="mx-auto max-w-[1320px] pb-8">
+      <header className="rise mb-6 flex flex-wrap items-end justify-between gap-6 px-2 pt-2">
         <div>
-          <p className="t-label mb-2">Due diligence · week 3 of 4</p>
-          <h1 className="text-[26px] font-semibold leading-8 tracking-tight">Project Kestrel</h1>
-          <p className="mt-1.5 max-w-[52ch] text-[14px] leading-6 text-ink-2">
-            Solvane Search Partners acquiring Kestrel Robotics, a lower-middle-market warehouse-automation company.
-            {lastEvent && <> Last agent activity at <span className="t-mono text-ink">{timeShort(lastEvent.occurred_at)}</span>.</>}
+          <p className="label">Due diligence · week 3 of 4</p>
+          <h1 className="display mt-2 text-[38px] leading-[1.05]">Project Kestrel</h1>
+          <p className="mt-2 max-w-[46ch] text-[13.5px] leading-5 text-ink-2">
+            Solvane Search Partners acquiring Kestrel Robotics, a warehouse-automation company.
+            Four specialist agents are reading the data room.
           </p>
         </div>
-        <SeverityGauge findings={findings} />
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 rounded-full bg-card px-4 py-2" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <span className="h-2 w-2 rounded-full bg-ok" />
+            <span className="text-[12.5px] text-ink-2">Fleet live</span>
+            {events[0] && <span className="text-[12.5px] text-ink-3">· last read {timeShort(events[0].occurred_at)}</span>}
+          </div>
+          <Button variant="primary" onClick={() => navigate('/risk-register')}>
+            Open the register <ArrowUpRight size={15} />
+          </Button>
+        </div>
       </header>
 
-      <div className="mb-12 flex divide-x divide-line border-y border-line py-5 [&>*]:pl-8 [&>*:first-child]:pl-0">
-        <Stat label="Needs review" value={summary?.needs_review ?? '–'} tone={(summary?.needs_review ?? 0) > 0 ? 'warn' : undefined} />
-        <Stat label="Resolved" value={summary?.resolved ?? '–'} />
-        <Stat label="Documents read" value={summary?.documents_processed ?? '–'} />
-        <Stat label="Blocked by Model Armor" value={summary?.blocked_injections ?? '–'} tone={(summary?.blocked_injections ?? 0) > 0 ? 'high' : undefined} />
-        <Stat label="Cross-domain links" value={findings.reduce((n, f) => n + f.cross_referenced_finding_ids.length, 0) / 2 | 0} />
-      </div>
+      <div className="grid grid-cols-12 gap-5">
+        <section className="card rise col-span-12 flex flex-col lg:col-span-4" style={{ animationDelay: '40ms' }}>
+          <CardHead title="Exposure" hint="Everything still open, weighted by severity" />
+          <div className="flex flex-1 items-center justify-center pb-1">
+            <ExposureArc findings={findings} />
+          </div>
+        </section>
 
-      <section className="mb-12">
-        <SectionLabel>Data room</SectionLabel>
-        <DataRoomStrip documents={documents} />
-      </section>
+        <section className="card rise col-span-12 flex flex-col md:col-span-6 lg:col-span-4" style={{ animationDelay: '80ms' }}>
+          <CardHead title="Where the risk sits" hint="Findings by department" />
+          <div className="flex flex-1 items-center justify-center">
+            <DomainDonut findings={findings} />
+          </div>
+        </section>
 
-      <section className="mb-12">
-        <SectionLabel right={<span className="t-meta">Findings from different documents that point at the same customer, person or asset</span>}>
-          Risk clusters
-        </SectionLabel>
-        <RiskClusters findings={findings} onSelect={openFinding} />
-      </section>
+        <section className="card rise col-span-12 md:col-span-6 lg:col-span-4" style={{ animationDelay: '120ms' }}>
+          <CardHead title="Evidence" hint="Every claim quoted verbatim from its source, or held back" />
+          <EvidenceBars findings={findings} />
+          <div className="mt-5 flex items-center gap-6 border-t border-hair pt-4">
+            <div>
+              <p className="display text-[26px] leading-7">{summary?.documents_processed ?? '–'}</p>
+              <p className="label mt-0.5">documents read</p>
+            </div>
+            <div>
+              <p className="display text-[26px] leading-7 text-high">{summary?.blocked_injections ?? '–'}</p>
+              <p className="label mt-0.5">blocked by armor</p>
+            </div>
+            <div>
+              <p className="display text-[26px] leading-7">{links}</p>
+              <p className="label mt-0.5">cross links</p>
+            </div>
+          </div>
+        </section>
 
-      <div className="grid grid-cols-[minmax(0,7fr)_minmax(0,5fr)] gap-12">
-        <section>
-          <SectionLabel right={
-            <button onClick={() => navigate('/risk-register')} className="text-[12px] font-medium text-accent hover:underline">
-              Open the register
-            </button>
-          }>
-            Open risks, by severity
-          </SectionLabel>
-          <ul className="divide-y divide-line border-y border-line">
-            {open.slice(0, 8).map(f => (
-              <li key={f.id} className="flex cursor-pointer items-start gap-4 py-3.5 hover:bg-raised" onClick={() => openFinding(f.id)}>
-                <div className="w-[84px] shrink-0 pt-0.5"><SeverityPill severity={f.severity} /></div>
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-[13px] leading-5">{f.summary}</p>
-                  <p className="t-meta mt-1 flex items-center gap-2">
-                    <Domain domain={f.domain} />
-                    <span>·</span>
-                    <span className="truncate">{f.red_flag_pattern}</span>
-                    {f.cross_referenced_finding_ids.length > 0 && (
-                      <span className="inline-flex items-center gap-1 text-accent"><Link2 size={11} />{f.cross_referenced_finding_ids.length}</span>
-                    )}
-                  </p>
+        <section className="card rise col-span-12" style={{ animationDelay: '160ms' }}>
+          <CardHead title="Data room"
+            hint="Each file is screened by Model Armor, then routed to the specialist that owns it" />
+          <DataRoom documents={documents} />
+        </section>
+
+        <section className="card rise col-span-12 flex flex-col lg:col-span-7" style={{ animationDelay: '200ms' }}>
+          <CardHead title="Connected risk"
+            hint="One entity, several departments — the pattern a solo reviewer misses" />
+          <div className="flex flex-1 items-center">
+            <Constellation findings={findings} onSelect={openFinding} />
+          </div>
+        </section>
+
+        <section className="card rise col-span-12 lg:col-span-5" style={{ animationDelay: '240ms' }}>
+          <CardHead title="Highest severity first"
+            right={<Button variant="quiet" onClick={() => navigate('/risk-register')}>All {findings.length}</Button>} />
+          <ul className="-mx-2 flex flex-col">
+            {open.slice(0, 5).map(f => (
+              <li key={f.id} onClick={() => openFinding(f.id)}
+                className="rowlink cursor-pointer rounded-[var(--radius-inner)] px-2 py-2.5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: f.severity === 'high' ? 'var(--color-high)' : f.severity === 'medium' ? 'var(--color-med)' : 'var(--color-low)' }} />
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-[13px] leading-[1.45]">{f.summary}</p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <DomainChip domain={f.domain} />
+                      {f.cross_referenced_finding_ids.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11.5px] text-ink-3">
+                          <Link2 size={11} />{f.cross_referenced_finding_ids.length} linked
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </li>
             ))}
-            {open.length === 0 && <li className="py-8 text-center text-ink-2">No open risks. Drop documents into the data room to start.</li>}
+            {open.length === 0 && <li className="py-8 text-center text-[13px] text-ink-3">Nothing open. Drop a document into the data room to start.</li>}
           </ul>
         </section>
 
-        <div className="flex flex-col gap-10">
-          <section>
-            <SectionLabel right={
-              <Button variant="secondary" onClick={generate} disabled={generating}>
-                <Mic size={13} />{generating ? 'Generating' : briefing ? 'Regenerate' : 'Generate'}
-              </Button>
-            }>
-              Voice briefing
-            </SectionLabel>
-            {briefing ? (
-              <div className="rounded-lg border border-line bg-raised p-5">
-                <div className="flex items-start gap-4">
-                  <button
-                    onClick={togglePlay}
-                    aria-label={playing ? 'Pause briefing' : 'Play briefing'}
-                    className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover"
-                  >
-                    {playing ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
-                  </button>
-                  <div className="min-w-0">
-                    <div className="t-mono text-ink-2">{briefing.briefing_date}</div>
-                    <p className={`mt-1.5 max-w-[60ch] text-[13px] leading-[1.6] text-ink ${expanded ? '' : 'line-clamp-4'}`}>
-                      {briefing.script_text}
-                    </p>
-                    <button onClick={() => setExpanded(v => !v)} className="mt-2 text-[12px] font-medium text-accent hover:underline">
-                      {expanded ? 'Show less' : 'Read the full script'}
-                    </button>
-                  </div>
-                </div>
-                <audio ref={audioRef} onEnded={() => setPlaying(false)} />
-              </div>
-            ) : (
-              <p className="t-meta">No briefing yet. Generate one to hear the current risk state read aloud.</p>
-            )}
-          </section>
-
-          <section>
-            <SectionLabel right={
-              <button onClick={() => navigate('/audit-trail')} className="text-[12px] font-medium text-accent hover:underline">
-                Full audit trail
+        <section className="card rise col-span-12 flex flex-col lg:col-span-7" style={{ animationDelay: '280ms' }}>
+          <CardHead title="Daily briefing" hint="The day's risk state, spoken"
+            right={<Button variant="soft" onClick={generate} disabled={generating}>
+              <Mic size={14} />{generating ? 'Generating' : briefing ? 'Regenerate' : 'Generate'}
+            </Button>} />
+          {briefing ? (
+            <div className="flex flex-1 items-center gap-5">
+              <button onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-colors hover:bg-accent-hover">
+                {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
               </button>
-            }>
-              Recent activity
-            </SectionLabel>
-            <ul className="divide-y divide-line border-y border-line">
-              {events.slice(0, 6).map(e => {
-                const Icon = eventIcon[e.event_type] ?? FileText
-                const block = e.event_type === 'model_armor_block'
-                return (
-                  <li key={e.id} className="flex items-start gap-3 py-2.5">
-                    <span className="t-mono w-11 shrink-0 pt-0.5 text-ink-3">{timeShort(e.occurred_at)}</span>
-                    <Icon size={14} className={`mt-0.5 shrink-0 ${block ? 'text-sev-high' : 'text-ink-3'}`} />
-                    <span className={`line-clamp-2 text-[13px] leading-5 ${block ? 'font-medium text-sev-high' : 'text-ink'}`}>{e.description}</span>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-        </div>
+              <div className="min-w-0">
+                <p className="label">{briefing.briefing_date}</p>
+                <p className={`quote mt-2 max-w-[64ch] text-[15px] leading-[1.6] text-ink ${expanded ? '' : 'line-clamp-3'}`}>
+                  {briefing.script_text}
+                </p>
+                <button onClick={() => setExpanded(v => !v)} className="mt-2 text-[12.5px] font-medium text-accent hover:underline">
+                  {expanded ? 'Show less' : 'Read the full script'}
+                </button>
+              </div>
+              <audio ref={audioRef} onEnded={() => setPlaying(false)} />
+            </div>
+          ) : (
+            <p className="text-[13px] text-ink-3">No briefing yet. Generate one to hear the current risk state read aloud.</p>
+          )}
+        </section>
+
+        <section className="card rise col-span-12 lg:col-span-5" style={{ animationDelay: '320ms' }}>
+          <CardHead title="Activity"
+            right={<Button variant="quiet" onClick={() => navigate('/audit-trail')}>Full trail</Button>} />
+          <ul className="flex flex-col gap-3.5">
+            {events.slice(0, 5).map(e => {
+              const Icon = eventIcon[e.event_type] ?? FileText
+              const block = e.event_type === 'model_armor_block'
+              return (
+                <li key={e.id} className="flex items-start gap-3">
+                  <span className={`mt-px flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${block ? 'bg-high text-white' : 'bg-sunk text-ink-3'}`}>
+                    <Icon size={13} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className={`line-clamp-2 text-[12.5px] leading-[1.45] ${block ? 'font-medium text-high' : 'text-ink'}`}>{e.description}</p>
+                    <p className="mt-0.5 text-[11.5px] text-ink-3">{timeShort(e.occurred_at)}</p>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
       </div>
     </div>
   )

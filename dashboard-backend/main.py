@@ -88,6 +88,18 @@ def risk_register(status: str | None = None, user: str = Depends(require_user)):
     return {"findings": findings}
 
 
+@app.get("/api/documents")
+def documents(user: str = Depends(require_user)):
+    docs = [s.to_dict() for s in store.db().collection("documents").stream()]
+    counts: dict[str, int] = {}
+    for f in store.list_findings():
+        counts[f.get("document_id", "")] = counts.get(f.get("document_id", ""), 0) + 1
+    for d in docs:
+        d["finding_count"] = counts.get(d.get("id", ""), 0)
+    docs.sort(key=lambda d: d.get("ingested_at") or 0)
+    return {"documents": docs}
+
+
 @app.get("/api/summary")
 def summary(user: str = Depends(require_user)):
     findings = store.list_findings()

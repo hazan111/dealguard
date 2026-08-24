@@ -78,6 +78,18 @@ export interface Finding {
   drafted_to_exceptions?: boolean
 }
 
+export interface DocumentRecord {
+  id: string
+  name: string
+  drive_url: string
+  category: 'legal' | 'financial' | 'hr' | 'ip' | 'unclassified'
+  ingested_at: string
+  model_armor_verdict: 'clean' | 'blocked'
+  model_armor_detail: string
+  routed_to_agent: string
+  finding_count: number
+}
+
 export interface Summary {
   total_findings: number
   open_risks: number

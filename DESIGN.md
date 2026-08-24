@@ -60,3 +60,11 @@ Strategy: Restrained for chrome (accent under 10% of the surface), Full palette 
 ## Bans (on top of impeccable's)
 
 Orange accent, dark sidebar, metric cards, emoji, illustrations, gradient text, side-stripe borders.
+
+## Supporting visuals (added 2026-08-24 after review: "too dense, no visual direction")
+
+Three components carry the visual identity; everything else stays quiet.
+- **Severity gauge**: a 12-slice half-circle (3° gaps) colored high → medium → low in proportion; the status word (Elevated / Attention / Watch / Clear) sits in the middle, the number sits outside to the right. Never a full circle, never a percentage.
+- **Data room strip**: one tile per document (mono filename, domain, finding count, ingest time); a Model Armor block is the only red tile.
+- **Risk clusters**: a small node diagram per cluster, the shared entity on top, member findings as domain-colored nodes fanned below and connected with hairline curves. Domain hues: legal ink, financial amber, hr green, ip red.
+Spacing: page padding 40px, section gap 48px, table rows 44px, overview rows two lines.

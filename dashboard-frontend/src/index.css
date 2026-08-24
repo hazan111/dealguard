@@ -80,7 +80,7 @@ body {
   @apply text-[11px] font-medium uppercase text-ink-2;
   letter-spacing: 0.08em;
 }
-.table td { @apply h-9 border-b border-line px-3 align-middle; }
+.table td { @apply h-11 border-b border-line px-3 align-middle; }
 .table tbody tr { transition: background-color 120ms var(--ease-out-quart); }
 .table tbody tr.clickable { @apply cursor-pointer; }
 .table tbody tr.clickable:hover { @apply bg-raised; }

@@ -57,8 +57,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class ResolveRequest(BaseModel):
-    resolved_by: str
+def reviewer_name(username: str) -> str:
+    """Display name for the audit record.
+
+    Never taken from the request body: 'who signed this off' is the one field
+    the whole product rests on, so it comes from the verified JWT subject and
+    nowhere else. A client can ask to resolve a finding; it cannot choose whose
+    name goes on it.
+    """
+    names = {ADMIN_USER: os.environ.get("DASHBOARD_ADMIN_DISPLAY_NAME", "Maya Chen")}
+    return names.get(username, username)
 
 
 @app.get("/healthz")
@@ -119,16 +127,17 @@ def summary(user: str = Depends(require_user)):
 
 
 @app.post("/api/risk-register/{fid}/resolve")
-def resolve(fid: str, req: ResolveRequest, user: str = Depends(require_user)):
+def resolve(fid: str, user: str = Depends(require_user)):
     # Human-only: this endpoint is only reachable with a human's JWT; agents
     # have no route that can set status=resolved.
-    if not store.resolve_finding(fid, req.resolved_by or user):
+    signer = reviewer_name(user)
+    if not store.resolve_finding(fid, signer):
         raise HTTPException(404, "finding not found")
     store.append_timeline_event(
         event_type="finding_updated",
-        description=f"Finding resolved by {req.resolved_by or user} (human sign-off)",
+        description=f"Finding resolved by {signer} (human sign-off)",
         related_finding_id=fid)
-    return {"ok": True}
+    return {"ok": True, "resolved_by": signer}
 
 
 @app.get("/api/risk-register/export")
@@ -272,7 +281,7 @@ def draft_exception(fid: str, user: str = Depends(require_user)):
         {"insertText": {"endOfSegmentLocation": {}, "text": entry}}]}).execute()
     store.append_timeline_event(
         event_type="finding_updated",
-        description="Finding drafted into the Schedule of Exceptions Google Doc",
+        description=f"Finding drafted into the Schedule of Exceptions Google Doc by {reviewer_name(user)}",
         related_finding_id=fid)
     store.update_finding(fid, {"drafted_to_exceptions": True})
     return {"ok": True, "doc_id": doc_id,

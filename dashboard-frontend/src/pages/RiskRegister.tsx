@@ -51,10 +51,9 @@ export default function RiskRegister() {
   async function resolve(f: Finding) {
     setBusy(true)
     try {
-      await api(`/api/risk-register/${f.id}/resolve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resolved_by: 'Maya Chen' }),
-      })
+      // No name in the body on purpose: the server signs the record with the
+      // authenticated reviewer, so the client cannot choose who signed it.
+      await api(`/api/risk-register/${f.id}/resolve`, { method: 'POST' })
       setConfirmResolve(false)
       await refresh()
     } finally { setBusy(false) }

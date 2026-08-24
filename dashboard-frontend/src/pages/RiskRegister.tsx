@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Download, ExternalLink, FileCheck2, Link2, Search, X } from 'lucide-react'
+import { AlertTriangle, Check, Download, ExternalLink, FileCheck2, Link2, Search, X } from 'lucide-react'
 import { api, downloadCsv, type Finding } from '../api'
-import { Button, DomainTag, Segmented, SeverityTag, StatusTag } from '../components/ui'
+import { ActionTag, Button, DeptGlyph, DomainTag, Segmented, SeverityTag, StatusTag } from '../components/ui'
 
 const severityRank = { high: 0, medium: 1, low: 2 }
 
@@ -114,22 +114,31 @@ export default function RiskRegister() {
               return (
                 <li key={f.id} onClick={() => select(f.id)}
                   className={`cursor-pointer border-r border-b border-line px-5 py-4 transition-colors duration-200 ${active ? 'bg-accent-soft' : 'hover:bg-quiet'}`}>
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] leading-[1.5]">{f.summary}</p>
+                  <div className="flex items-start gap-4">
+                    <DeptGlyph domain={f.domain} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-6">
+                        <p className="text-[13.5px] leading-[1.5]">{f.summary}</p>
+                        <span className="mono hidden shrink-0 text-ink-3 lg:block">{f.document_name}</span>
+                      </div>
                       <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <SeverityTag severity={f.severity} />
                         <DomainTag domain={f.domain} />
                         <StatusTag status={f.status} />
+                        <ActionTag action={f.recommended_action} />
                         <span className="text-[11.5px] text-ink-3">{f.red_flag_pattern}</span>
                         {f.cross_referenced_finding_ids.length > 0 && (
                           <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-accent">
                             <Link2 size={11} />{f.cross_referenced_finding_ids.length}
                           </span>
                         )}
+                        {!f.citation_verified && (
+                          <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-high">
+                            <AlertTriangle size={11} /> quote unverified
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <span className="mono hidden shrink-0 text-ink-3 lg:block">{f.document_name}</span>
                   </div>
                 </li>
               )
@@ -156,8 +165,13 @@ export default function RiskRegister() {
               </button>
             </div>
 
-            <h2 className="tight text-[19px] font-bold leading-[1.3]">{selected.summary}</h2>
-            <p className="mt-2 text-[12.5px] text-ink-3">{selected.red_flag_pattern}</p>
+            <div className="flex items-start gap-3.5">
+              <DeptGlyph domain={selected.domain} size={44} />
+              <div className="min-w-0">
+                <h2 className="tight text-[19px] font-bold leading-[1.3]">{selected.summary}</h2>
+                <p className="mt-2 text-[12.5px] text-ink-3">{selected.red_flag_pattern}</p>
+              </div>
+            </div>
 
             <div className="mt-6 rounded-[12px] border border-line bg-quiet p-4">
               <p className="label">From the document</p>

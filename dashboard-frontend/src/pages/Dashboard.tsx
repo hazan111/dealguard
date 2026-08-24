@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Ban, FileText, Link2, Mic, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, fetchAudio, type DocumentRecord, type Finding, type Summary, type TimelineEvent } from '../api'
-import { Button, CellHead, DomainTag, SeverityTag, timeShort } from '../components/ui'
+import { ActionTag, Button, CellHead, DeptGlyph, SeverityTag, timeShort } from '../components/ui'
 import { Constellation, DataRoom, DomainDonut, EvidenceBars, ExposurePanel } from '../components/visuals'
 
 interface Briefing { id: string; briefing_date: string; script_text: string }
@@ -143,16 +143,19 @@ export default function Dashboard() {
           <ul className="-mx-2.5">
             {open.slice(0, 5).map(f => (
               <li key={f.id} onClick={() => openFinding(f.id)}
-                className="hoverable cursor-pointer rounded-[10px] px-2.5 py-2.5">
-                <p className="line-clamp-2 text-[13px] leading-[1.45]">{f.summary}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <SeverityTag severity={f.severity} />
-                  <DomainTag domain={f.domain} />
-                  {f.cross_referenced_finding_ids.length > 0 && (
-                    <span className="inline-flex items-center gap-1 text-[11.5px] text-ink-3">
-                      <Link2 size={11} />{f.cross_referenced_finding_ids.length}
-                    </span>
-                  )}
+                className="hoverable flex cursor-pointer items-start gap-3.5 rounded-[10px] px-2.5 py-3">
+                <DeptGlyph domain={f.domain} size={34} />
+                <div className="min-w-0">
+                  <p className="line-clamp-2 text-[13px] leading-[1.45]">{f.summary}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <SeverityTag severity={f.severity} />
+                    <ActionTag action={f.recommended_action} />
+                    {f.cross_referenced_finding_ids.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-[11.5px] text-ink-3">
+                        <Link2 size={11} />{f.cross_referenced_finding_ids.length}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </li>
             ))}

@@ -1,4 +1,31 @@
 import type { ReactNode } from 'react'
+import { Fingerprint, LineChart, Scale, Users, type LucideIcon } from 'lucide-react'
+
+/* One glyph per specialist, so a row of findings reads as a row of departments
+   before a single word is read. */
+export const deptIcon: Record<string, LucideIcon> = {
+  legal: Scale,
+  financial: LineChart,
+  hr: Users,
+  ip: Fingerprint,
+}
+
+export function DeptGlyph({ domain, size = 38 }: { domain: string; size?: number }) {
+  const Icon = deptIcon[domain] ?? Scale
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center rounded-[11px] bg-quiet text-ink-2"
+      style={{ width: size, height: size }}
+      title={domainMeta[domain]?.label ?? domain}
+    >
+      <Icon size={size * 0.42} strokeWidth={1.9} />
+    </span>
+  )
+}
+
+export function ActionTag({ action }: { action: string }) {
+  return <span className="tag border border-line-2 capitalize text-ink-2">{action}</span>
+}
 
 export const domainMeta: Record<string, { label: string; color: string; soft: string }> = {
   legal: { label: 'Legal', color: 'var(--color-legal)', soft: 'var(--color-quiet)' },

@@ -11,6 +11,48 @@ const meta: Record<string, { icon: typeof FileText; label: string; tone: 'quiet'
   voice_briefing_generated: { icon: Mic, label: 'Briefing', tone: 'quiet' },
 }
 
+/* The day's events on a real time lane: one mark per event at its actual
+   clock position, red where Model Armor blocked something. Shows the burst
+   pattern of a fleet reading a data room, not a fabricated trend line. */
+function DayLane({ events }: { events: TimelineEvent[] }) {
+  const marks = useMemo(() => {
+    const times = events.map(e => new Date(e.occurred_at).getTime())
+    if (times.length === 0) return null
+    const from = Math.min(...times), to = Math.max(...times)
+    const span = Math.max(to - from, 60_000)
+    return {
+      from, to,
+      points: events.map(e => ({
+        id: e.id,
+        x: ((new Date(e.occurred_at).getTime() - from) / span) * 100,
+        blocked: e.event_type === 'model_armor_block',
+        label: `${timeShort(e.occurred_at)} — ${e.description.slice(0, 80)}`,
+      })),
+    }
+  }, [events])
+
+  if (!marks) return null
+  const minutes = Math.max(1, Math.round((marks.to - marks.from) / 60_000))
+
+  return (
+    <div>
+      <div className="relative h-11">
+        <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line" aria-hidden />
+        {marks.points.map(p => (
+          <span key={p.id} title={p.label}
+            className={`absolute top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-full ${p.blocked ? 'bg-high' : 'bg-ink'}`}
+            style={{ left: `calc(${p.x}% - 1.5px)`, height: p.blocked ? 26 : 18 }} />
+        ))}
+      </div>
+      <div className="mono mt-1.5 flex items-center justify-between text-ink-3">
+        <span>{timeShort(new Date(marks.from).toISOString())}</span>
+        <span className="text-[11px]">{minutes} min of work</span>
+        <span>{timeShort(new Date(marks.to).toISOString())}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function AuditTrail() {
   const [events, setEvents] = useState<TimelineEvent[]>([])
 
@@ -42,32 +84,60 @@ export default function AuditTrail() {
         </p>
       </header>
 
-      <div className="rise max-w-[980px]">
-        {groups.map(([day, list]) => (
-          <section key={day} className="grid-shell mb-6">
-            <p className="label border-r border-b border-line px-5 py-3.5">{day}</p>
-            <ol>
-              {list.map(e => {
-                const m = meta[e.event_type] ?? meta.document_ingested
-                const Icon = m.icon
-                const alarm = m.tone === 'alarm'
-                return (
-                  <li key={e.id}
-                    className={`grid grid-cols-[28px_112px_1fr_52px] items-start gap-3 border-r border-b border-line px-5 py-3.5 ${alarm ? 'bg-high-soft' : ''}`}>
-                    <span className={`mt-px flex h-7 w-7 items-center justify-center rounded-[8px] ${
-                      alarm ? 'bg-high text-white' : m.tone === 'accent' ? 'bg-accent-soft text-accent' : 'bg-quiet text-ink-3'
-                    }`}>
-                      <Icon size={13} />
-                    </span>
-                    <span className={`pt-1.5 text-[12px] font-medium ${alarm ? 'text-high' : 'text-ink-2'}`}>{m.label}</span>
-                    <p className={`pt-1 text-[13px] leading-[1.55] ${alarm ? 'font-medium text-high' : 'text-ink'}`}>{e.description}</p>
-                    <span className="mono pt-1.5 text-right text-ink-3">{timeShort(e.occurred_at)}</span>
-                  </li>
-                )
-              })}
-            </ol>
-          </section>
-        ))}
+      <div className="rise max-w-[1020px]">
+        {groups.map(([day, list]) => {
+          const count = (t: string) => list.filter(e => e.event_type === t).length
+          const stats = [
+            { n: count('document_ingested'), label: 'documents read' },
+            { n: count('finding_created'), label: 'findings raised' },
+            { n: count('finding_updated'), label: 'updates' },
+            { n: count('model_armor_block'), label: 'blocked', alarm: true },
+          ]
+          return (
+            <section key={day} className="grid-shell mb-6">
+              <div className="grid grid-cols-1 border-r border-b border-line md:grid-cols-[1fr_300px]">
+                <div className="p-6">
+                  <p className="label">{day}</p>
+                  <div className="mt-4 flex flex-wrap gap-x-9 gap-y-4">
+                    {stats.map(s => (
+                      <div key={s.label}>
+                        <p className={`tight text-[26px] font-black leading-none ${s.alarm && s.n > 0 ? 'text-high' : ''}`}>{s.n}</p>
+                        <p className="label mt-2">{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="border-t border-line p-6 md:border-t-0 md:border-l">
+                  <p className="label mb-3">When the fleet was working</p>
+                  <DayLane events={list} />
+                </div>
+              </div>
+
+              <ol className="relative">
+                {list.map((e, i) => {
+                  const m = meta[e.event_type] ?? meta.document_ingested
+                  const Icon = m.icon
+                  const alarm = m.tone === 'alarm'
+                  const last = i === list.length - 1
+                  return (
+                    <li key={e.id}
+                      className={`relative grid grid-cols-[36px_120px_1fr_52px] items-start gap-3 border-r border-b border-line px-6 py-4 ${alarm ? 'bg-high-soft' : ''}`}>
+                      {!last && <span className="absolute left-[41px] top-[46px] bottom-0 w-px bg-line" aria-hidden />}
+                      <span className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-[10px] ${
+                        alarm ? 'bg-high text-white' : m.tone === 'accent' ? 'bg-ink text-white' : 'bg-quiet text-ink-2'
+                      }`}>
+                        <Icon size={14} />
+                      </span>
+                      <span className={`pt-2 text-[12px] font-medium ${alarm ? 'text-high' : 'text-ink-2'}`}>{m.label}</span>
+                      <p className={`pt-1.5 text-[13px] leading-[1.55] ${alarm ? 'font-medium text-high' : 'text-ink'}`}>{e.description}</p>
+                      <span className="mono pt-2 text-right text-ink-3">{timeShort(e.occurred_at)}</span>
+                    </li>
+                  )
+                })}
+              </ol>
+            </section>
+          )
+        })}
         {events.length === 0 && <p className="text-[13px] text-ink-3">Nothing recorded yet.</p>}
       </div>
     </div>

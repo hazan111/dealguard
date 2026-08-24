@@ -45,6 +45,8 @@ Headings `-0.03em` tracking, body `-0.011em`, labels 11px uppercase `0.08em`. Bi
 3. **Evidence bars** — one segment per finding; ink when the quote was found verbatim in the source, red when it was not.
 4. **Data room** — a bordered tile per document; the Model Armor block is the only red tile.
 5. **Constellation** — shared entity in the centre (red when the cluster carries a high finding), member findings ringed around it, hairline spokes.
+6. **Department glyph** — every finding row opens with its specialist's mark (Scale / LineChart / Users / Fingerprint) in a 38px quiet square, so a list of findings scans as a list of departments before a word is read. Always neutral; severity is the tag's job.
+7. **Day lane** — the audit trail's day header plots one mark per event at its real clock position (red where Model Armor blocked), with the working span in minutes. A burst pattern, not a fabricated trend line.
 
 ## Motion
 

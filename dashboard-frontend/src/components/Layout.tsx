@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { ChevronRight, LayoutGrid, ListFilter, LogOut, ScrollText, Shield } from 'lucide-react'
 import { api, setToken, type Summary } from '../api'
 import { domainMeta } from './ui'
+import { usePoll } from '../usePoll'
 
 const nav = [
   { to: '/', label: 'Deal overview', icon: LayoutGrid, count: (s: Summary | null) => s?.documents_processed },
@@ -20,11 +21,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     try { setSummary(await api<Summary>('/api/summary')) } catch { /* page shows its own error state */ }
   }, [])
 
-  useEffect(() => {
-    refresh()
-    const timer = setInterval(refresh, 15_000)
-    return () => clearInterval(timer)
-  }, [refresh])
+  usePoll(refresh, 60_000)
 
   return (
     <div className="flex min-h-screen">

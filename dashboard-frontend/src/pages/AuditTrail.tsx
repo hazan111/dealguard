@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Ban, FileText, Mic, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, type TimelineEvent } from '../api'
 import { dateLong, timeShort } from '../components/ui'
+import { usePoll } from '../usePoll'
 
 const meta: Record<string, { icon: typeof FileText; label: string; tone: 'quiet' | 'accent' | 'alarm' }> = {
   document_ingested: { icon: FileText, label: 'Document read', tone: 'quiet' },
@@ -61,11 +62,7 @@ export default function AuditTrail() {
     setEvents(events)
   }, [])
 
-  useEffect(() => {
-    refresh()
-    const timer = setInterval(refresh, 8_000)
-    return () => clearInterval(timer)
-  }, [refresh])
+  usePoll(refresh, 20_000)
 
   const groups = useMemo(() => {
     const map = new Map<string, TimelineEvent[]>()

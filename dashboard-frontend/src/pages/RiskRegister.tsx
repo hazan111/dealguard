@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, Check, Download, ExternalLink, FileCheck2, Link2, Search, X } from 'lucide-react'
 import { api, downloadCsv, type Finding } from '../api'
 import { ActionTag, Button, DeptGlyph, DomainTag, Segmented, SeverityTag, StatusTag } from '../components/ui'
+import { usePoll } from '../usePoll'
 
 const severityRank = { high: 0, medium: 1, low: 2 }
 
@@ -22,11 +23,7 @@ export default function RiskRegister() {
     setFindings(findings)
   }, [])
 
-  useEffect(() => {
-    refresh()
-    const timer = setInterval(refresh, 10_000)
-    return () => clearInterval(timer)
-  }, [refresh])
+  usePoll(refresh, 30_000)
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()

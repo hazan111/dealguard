@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Ban, FileText, Link2, Mic, Pause, Play, RefreshCw, ShieldAlert } from 'lucide-react'
 import { api, fetchAudio, type DocumentRecord, type Finding, type Summary, type TimelineEvent } from '../api'
 import { ActionTag, Button, CellHead, DeptGlyph, SeverityTag, timeShort } from '../components/ui'
 import { Constellation, DataRoom, DomainDonut, EvidenceBars, ExposurePanel } from '../components/visuals'
+import { usePoll } from '../usePoll'
 
 interface Briefing { id: string; briefing_date: string; script_text: string }
 
@@ -41,11 +42,7 @@ export default function Dashboard() {
     setSummary(s); setFindings(f.findings); setDocuments(d.documents); setEvents(t.events); setBriefing(b.briefing)
   }, [])
 
-  useEffect(() => {
-    refresh()
-    const timer = setInterval(refresh, 10_000)
-    return () => clearInterval(timer)
-  }, [refresh])
+  usePoll(refresh, 30_000)
 
   async function generate() {
     setGenerating(true)
